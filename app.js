@@ -1,11 +1,13 @@
 const $ = (id) => document.getElementById(id);
 const eur = (n) => new Intl.NumberFormat('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0) + ' €';
-const nombreCompleto = (p) => p ? `${p.nombre || ''} ${p.apellidos || ''}`.trim() : '—';
-const esc = (s) => String(s || '').replace(/"/g, '&quot;');
+const nombreCompleto = (p) => p ? `${p.nombre || ''} ${p.apellidos || ''}`.trim() || '(sin nombre)' : '—';
+const esc = (s) => String(s == null ? '' : s).replace(/"/g, '&quot;');
+const IDIOMAS = { es: 'Español', ca: 'Català', en: 'English' };
 
 let VAULT = null;
 let AUTOR = localStorage.getItem('autor') || null;
 let ESTADO = null;
+let SEL = null; // persona seleccionada
 
 // ---------------- Arranque ----------------
 async function boot() {
@@ -22,7 +24,7 @@ function pantallaConexion(handleGuardado) {
   document.body.innerHTML = `<div class="wrap"><div class="center">
     <h1>Gestor de Carteras</h1><p class="muted">Primera vez en este equipo</p>
     <div class="card">
-      <p><b>1.</b> Elige la carpeta <b>compartida</b> de OneDrive (la MISMA en tu Mac y en el equipo de Ana).</p>
+      <p><b>1.</b> Elige la carpeta <b>compartida</b> de OneDrive (la MISMA en tu Mac y en el de Ana).</p>
       <div class="row"><button class="primary" id="btnPick">${handleGuardado ? 'Reconectar la carpeta' : 'Elegir carpeta de OneDrive…'}</button>
         <span class="muted" id="pickMsg"></span></div>
       <p style="margin-top:18px"><b>2.</b> ¿Quién usa este equipo?</p>
@@ -32,17 +34,17 @@ function pantallaConexion(handleGuardado) {
       </div>
       <div class="row" style="margin-top:14px"><button class="primary" id="btnGo" disabled>Entrar</button></div>
     </div></div></div>`;
-  const refrescarGo = () => { $('btnGo').disabled = !(VAULT && AUTOR); };
+  const rg = () => { $('btnGo').disabled = !(VAULT && AUTOR); };
   $('btnPick').onclick = async () => {
     try {
       if (handleGuardado) { if (await Libro.permiso(handleGuardado, true)) VAULT = handleGuardado; }
       else VAULT = await Libro.elegirCarpeta();
-      if (VAULT) { $('pickMsg').textContent = '✓ carpeta conectada'; refrescarGo(); }
+      if (VAULT) { $('pickMsg').textContent = '✓ carpeta conectada'; rg(); }
     } catch (e) { $('pickMsg').textContent = 'No se pudo conectar la carpeta.'; }
   };
-  document.querySelectorAll('input[name=autor]').forEach(r => r.onchange = () => { AUTOR = r.value; refrescarGo(); });
+  document.querySelectorAll('input[name=autor]').forEach(r => r.onchange = () => { AUTOR = r.value; rg(); });
   $('btnGo').onclick = () => { localStorage.setItem('autor', AUTOR); entrar(); };
-  refrescarGo();
+  rg();
 }
 
 // ---------------- App ----------------
@@ -67,103 +69,183 @@ async function recargarYrender() {
 }
 function render() {
   if (TAB === 'clientes') return renderClientes();
-  if (TAB === 'actualizar') return $('view').innerHTML = `<h1>Actualizar</h1><div class="soon">Se conecta en la próxima entrega: registrar movimientos que escriben en el libro.</div>`;
-  if (TAB === 'informes') return $('view').innerHTML = `<h1>Informes</h1><div class="soon">Se conecta en la próxima entrega: el informe de tres páginas leyendo de los datos reales.</div>`;
+  if (TAB === 'actualizar') return $('view').innerHTML = `<h1>Actualizar</h1><div class="soon">En construcción — es la siguiente pantalla.</div>`;
+  if (TAB === 'informes') return $('view').innerHTML = `<h1>Informes</h1><div class="soon">En construcción — después de Actualizar.</div>`;
 }
-
-// escribir varios apuntes en orden
 async function apuntar(lista) { for (const [tipo, payload] of lista) await Libro.anexar(VAULT, AUTOR, tipo, payload); }
+const titularesDe = (st, cid) => [...(st.titulares[cid] || [])];
+const cartsDe = (st, pid) => Object.entries(st.carteras).filter(([cid, c]) => !c.baja && titularesDe(st, cid).includes(pid)).map(([cid, c]) => ({ cid, ...c }));
 
 // ---------------- Clientes ----------------
-function titularesDe(st, cid){ return [...(st.titulares[cid] || [])]; }
-
 function renderClientes() {
   const st = ESTADO || Libro.reconstruir([]);
   const personas = Object.values(st.personas);
-  const opcionesPersonas = personas.map(p => `<label class="chk"><input type="checkbox" value="${p.id}"> ${nombreCompleto(p)}</label>`).join('') || '<span class="muted">Añade personas primero.</span>';
+  if (SEL && !st.personas[SEL]) SEL = null;
 
-  // filas de carteras
-  const filas = Object.entries(st.carteras).filter(([,c]) => !c.baja).map(([cid, cart]) => {
-    const tits = titularesDe(st, cid);
-    const chips = tits.map(pid => `<span class="chip">${nombreCompleto(st.personas[pid])}
-      <button title="Quitar" data-quita="${cid}" data-p="${pid}">×</button></span>`).join('') || '<span class="muted">sin titulares</span>';
-    const noTit = personas.filter(p => !tits.includes(p.id));
-    const addSel = noTit.length ? `<select data-add="${cid}"><option value="">+ añadir titular…</option>
-      ${noTit.map(p => `<option value="${p.id}">${nombreCompleto(p)}</option>`).join('')}</select>` : '';
-    return `<tr><td>${cart.nombre} <span class="badge">${cart.tipo}</span></td>
-      <td><div class="chips">${chips}</div>${addSel}</td>
-      <td class="num">${eur(Libro.patrimonio(st, cid))}</td></tr>`;
-  }).join('');
+  const lista = personas.map(p => `<div class="item ${p.id===SEL?'sel':''}" data-pid="${p.id}">
+    <div class="n">${nombreCompleto(p)}</div>
+    <div class="m">${cartsDe(st,p.id).length} cartera(s)</div></div>`).join('') || '<div class="muted">Sin personas todavía.</div>';
 
   $('view').innerHTML = `
     <h1>Clientes</h1>
-    <div class="card"><h2>Nueva persona</h2>
-      <div class="row">
-        <input id="nom" placeholder="Nombre"><input id="ape" placeholder="Apellidos">
-        <label class="chk"><input type="checkbox" id="conInd" checked> con cartera individual</label>
-        <button class="primary" id="btnPersona">Añadir persona</button>
+    <div class="split">
+      <div class="card">
+        <h2>Personas</h2>
+        <div id="listaP">${lista}</div>
+        <div style="margin-top:12px;border-top:1px solid var(--linea);padding-top:12px">
+          <div class="row"><input id="nom" placeholder="Nombre"><input id="ape" placeholder="Apellidos"></div>
+          <div class="row" style="margin-top:8px">
+            <label class="chk"><input type="checkbox" id="conInd" checked> con cartera individual</label>
+            <button class="primary" id="btnPersona">Añadir persona</button></div>
+        </div>
       </div>
+      <div class="card" id="ficha"></div>
     </div>
-
-    <div class="card"><h2>Nueva cartera (individual o conjunta)</h2>
-      <div class="row">
-        <input id="cnom" placeholder="Nombre de la cartera" value="Cartera conjunta">
-      </div>
-      <p class="muted" style="margin:10px 0 4px">Titulares (marca uno para individual, dos o más para conjunta):</p>
-      <div class="chks" id="titSel">${opcionesPersonas}</div>
-      <div class="row" style="margin-top:10px"><button class="primary" id="btnCartera">Crear cartera</button>
-        <span class="muted" id="cmsg"></span></div>
-    </div>
-
-    <div class="card"><h2>Personas y carteras</h2>
+    <div class="card"><h2>Todas las carteras</h2>
       <table><thead><tr><th>Cartera</th><th>Titulares</th><th class="num">Patrimonio</th></tr></thead>
-        <tbody>${filas || '<tr><td colspan="3" class="muted">Sin carteras todavía.</td></tr>'}</tbody></table>
-      <div class="avisos">Todo lo que añadas se escribe como apunte en <b>tu</b> registro de OneDrive. Cuando OneDrive traiga el registro de Ana, sus altas aparecerán aquí (Refrescar o volver a la ventana). Al añadir un segundo titular a una cartera, pasa a conjunta sola.</div>
+      <tbody>${
+        Object.entries(st.carteras).filter(([,c])=>!c.baja).map(([cid,c])=>`<tr>
+          <td>${c.nombre} <span class="badge">${c.tipo}</span></td>
+          <td>${titularesDe(st,cid).map(pid=>nombreCompleto(st.personas[pid])).join(', ')||'—'}</td>
+          <td class="num">${eur(Libro.patrimonio(st,cid))}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Sin carteras.</td></tr>'
+      }</tbody></table></div>`;
+
+  document.querySelectorAll('.item').forEach(el => el.onclick = () => { SEL = el.dataset.pid; renderClientes(); });
+  $('btnPersona').onclick = altaPersona;
+  renderFicha();
+}
+
+function renderFicha() {
+  const st = ESTADO; const cont = $('ficha');
+  if (!SEL) { cont.innerHTML = `<h2>Ficha</h2><p class="muted">Selecciona una persona de la izquierda para ver y editar sus datos, o crea una nueva.</p>`; return; }
+  const p = st.personas[SEL];
+  const otras = Object.values(st.personas).filter(x => x.id !== SEL);
+
+  const carteras = cartsDe(st, SEL).map(c => {
+    const tits = titularesDe(st, c.cid);
+    const chips = tits.map(pid => `<span class="chip">${nombreCompleto(st.personas[pid])}${pid!==SEL?` <button data-quita="${c.cid}" data-p="${pid}">×</button>`:''}</span>`).join('');
+    const noTit = otras.filter(x => !tits.includes(x.id));
+    const add = noTit.length ? `<select data-add="${c.cid}"><option value="">+ titular…</option>${noTit.map(x=>`<option value="${x.id}">${nombreCompleto(x)}</option>`).join('')}</select>` : '';
+    return `<div class="cartera">
+      <div class="row"><input data-cn="${c.cid}" value="${esc(c.nombre)}" style="flex:1">
+        <select data-ct="${c.cid}"><option value="individual" ${c.tipo==='individual'?'selected':''}>Individual</option>
+          <option value="conjunta" ${c.tipo==='conjunta'?'selected':''}>Conjunta</option></select>
+        <button class="ghost" data-gc="${c.cid}">Guardar</button></div>
+      <div class="chips" style="margin-top:8px">${chips}</div>${add}
+      <div style="margin-top:6px"><button class="danger" data-baja="${c.cid}">Dar de baja</button>
+        <button class="danger" data-del="${c.cid}" style="margin-left:6px">Eliminar</button>
+        <span class="muted" style="margin-left:8px">${eur(Libro.patrimonio(st,c.cid))}</span></div>
+    </div>`;
+  }).join('') || '<p class="muted">Sin carteras. Crea una abajo.</p>';
+
+  cont.innerHTML = `<h2>Ficha de ${nombreCompleto(p)}</h2>
+    <div class="row"><input id="fn" value="${esc(p.nombre)}" placeholder="Nombre"><input id="fa" value="${esc(p.apellidos)}" placeholder="Apellidos"></div>
+    <div class="row" style="margin-top:8px"><input id="fe" value="${esc(p.email)}" placeholder="Email"><input id="ft" value="${esc(p.telefono)}" placeholder="Teléfono"></div>
+    <div class="row" style="margin-top:8px"><label class="chk">Idioma
+      <select id="fi">${Object.entries(IDIOMAS).map(([k,v])=>`<option value="${k}" ${(p.idioma||'es')===k?'selected':''}>${v}</option>`).join('')}</select></label>
+      <button class="primary" id="btnFicha">Guardar ficha</button>
+      <button class="danger" id="btnDelP" style="margin-left:auto">Eliminar cliente…</button>
+      <span class="muted" id="fmsg"></span></div>
+
+    <div style="margin-top:16px"><h2>Carteras</h2>${carteras}</div>
+    <div style="margin-top:12px;border-top:1px solid var(--linea);padding-top:12px">
+      <div class="row"><input id="ncn" placeholder="Nombre de la nueva cartera" value="Cartera individual" style="flex:1"></div>
+      <p class="muted" style="margin:8px 0 4px">Otros titulares (marca para hacerla conjunta):</p>
+      <div class="chks">${otras.map(x=>`<label class="chk"><input type="checkbox" class="cotit" value="${x.id}"> ${nombreCompleto(x)}</label>`).join('') || '<span class="muted">no hay más personas</span>'}</div>
+      <div class="row" style="margin-top:8px"><button class="primary" id="btnNuevaC">Crear cartera para ${p.nombre}</button></div>
     </div>`;
 
-  $('btnPersona').onclick = altaPersona;
-  $('btnCartera').onclick = crearCartera;
-  document.querySelectorAll('[data-add]').forEach(s => s.onchange = () => { if (s.value) anadirTitular(s.dataset.add, s.value); });
-  document.querySelectorAll('[data-quita]').forEach(b => b.onclick = () => quitarTitular(b.dataset.quita, b.dataset.p));
+  $('btnFicha').onclick = guardarFicha;
+  $('btnNuevaC').onclick = nuevaCarteraPara;
+  cont.querySelectorAll('[data-gc]').forEach(b => b.onclick = () => guardarCartera(b.dataset.gc));
+  cont.querySelectorAll('[data-baja]').forEach(b => b.onclick = () => bajaCartera(b.dataset.baja));
+  cont.querySelectorAll('[data-del]').forEach(b => b.onclick = () => borrarCartera(b.dataset.del));
+  $('btnDelP').onclick = () => borrarPersona(SEL);
+  cont.querySelectorAll('[data-add]').forEach(s => s.onchange = () => { if (s.value) addTitular(s.dataset.add, s.value); });
+  cont.querySelectorAll('[data-quita]').forEach(b => b.onclick = () => quitaTitular(b.dataset.quita, b.dataset.p));
 }
 
 async function altaPersona() {
   const nombre = $('nom').value.trim(); if (!nombre) return;
   const apellidos = $('ape').value.trim();
   const pid = crypto.randomUUID();
-  const lista = [['alta_persona', { id: pid, nombre, apellidos }]];
+  const lista = [['alta_persona', { id: pid, nombre, apellidos, email: '', telefono: '', idioma: 'es' }]];
   if ($('conInd').checked) {
     const cid = crypto.randomUUID();
     lista.push(['alta_cartera', { id: cid, nombre: 'Cartera individual', tipo: 'individual' }]);
     lista.push(['titular', { cartera: cid, persona: pid }]);
   }
-  await apuntar(lista); await recargarYrender();
+  await apuntar(lista); SEL = pid; await recargarYrender();
 }
-
-async function crearCartera() {
-  const nombre = $('cnom').value.trim() || 'Cartera';
-  const sel = [...document.querySelectorAll('#titSel input:checked')].map(i => i.value);
-  if (!sel.length) { $('cmsg').textContent = 'Marca al menos un titular.'; return; }
-  const tipo = sel.length >= 2 ? 'conjunta' : 'individual';
+async function guardarFicha() {
+  await apuntar([['edit_persona', { id: SEL, nombre: $('fn').value.trim(), apellidos: $('fa').value.trim(),
+    email: $('fe').value.trim(), telefono: $('ft').value.trim(), idioma: $('fi').value }]]);
+  await recargarYrender(); if ($('fmsg')) $('fmsg').textContent = 'Guardado.';
+}
+async function nuevaCarteraPara() {
+  const nombre = $('ncn').value.trim() || 'Cartera';
+  const otros = [...document.querySelectorAll('.cotit:checked')].map(i => i.value);
   const cid = crypto.randomUUID();
-  const lista = [['alta_cartera', { id: cid, nombre, tipo }]];
-  for (const pid of sel) lista.push(['titular', { cartera: cid, persona: pid }]);
+  const tipo = otros.length ? 'conjunta' : 'individual';
+  const lista = [['alta_cartera', { id: cid, nombre, tipo }], ['titular', { cartera: cid, persona: SEL }]];
+  for (const pid of otros) lista.push(['titular', { cartera: cid, persona: pid }]);
+  await apuntar(lista); await recargarYrender();
+}
+async function guardarCartera(cid) {
+  const nombre = document.querySelector(`[data-cn="${cid}"]`).value.trim();
+  const tipo = document.querySelector(`[data-ct="${cid}"]`).value;
+  await apuntar([['edit_cartera', { id: cid, nombre, tipo }]]); await recargarYrender();
+}
+async function bajaCartera(cid) { await apuntar([['edit_cartera', { id: cid, baja: true }]]); await recargarYrender(); }
+async function addTitular(cid, pid) {
+  const st = ESTADO; const n = titularesDe(st, cid).length + 1;
+  const lista = [['titular', { cartera: cid, persona: pid }]];
+  if (n >= 2 && st.carteras[cid]?.tipo === 'individual') lista.push(['edit_cartera', { id: cid, tipo: 'conjunta' }]);
+  await apuntar(lista); await recargarYrender();
+}
+async function quitaTitular(cid, pid) {
+  const st = ESTADO; const rest = titularesDe(st, cid).filter(x => x !== pid).length;
+  const lista = [['quita_titular', { cartera: cid, persona: pid }]];
+  if (rest <= 1 && st.carteras[cid]?.tipo === 'conjunta') lista.push(['edit_cartera', { id: cid, tipo: 'individual' }]);
   await apuntar(lista); await recargarYrender();
 }
 
-async function anadirTitular(cid, pid) {
-  const st = ESTADO;
-  const nuevos = titularesDe(st, cid).length + 1;
-  const lista = [['titular', { cartera: cid, persona: pid }]];
-  if (nuevos >= 2 && st.carteras[cid]?.tipo === 'individual') lista.push(['edit_cartera', { id: cid, tipo: 'conjunta' }]);
-  await apuntar(lista); await recargarYrender();
+
+// predicado: apuntes de una cartera (definición, titulares, movimientos)
+function esDeCartera(cid) {
+  return (ev) => {
+    const p = ev.payload || {};
+    if ((ev.tipo === 'alta_cartera' || ev.tipo === 'edit_cartera') && p.id === cid) return true;
+    if ((ev.tipo === 'titular' || ev.tipo === 'quita_titular' || ev.tipo === 'movimiento') && p.cartera === cid) return true;
+    if (ev.tipo === 'correccion' && (p.cartera === cid || p.movimiento?.cartera === cid)) return true;
+    return false;
+  };
 }
-async function quitarTitular(cid, pid) {
-  const st = ESTADO;
-  const restantes = titularesDe(st, cid).filter(x => x !== pid).length;
-  const lista = [['quita_titular', { cartera: cid, persona: pid }]];
-  if (restantes <= 1 && st.carteras[cid]?.tipo === 'conjunta') lista.push(['edit_cartera', { id: cid, tipo: 'individual' }]);
-  await apuntar(lista); await recargarYrender();
+async function borrarCartera(cid) {
+  const st = ESTADO; const nombre = st.carteras[cid]?.nombre || 'esta cartera';
+  if (!confirm(`Eliminar "${nombre}" y todos sus movimientos, de forma permanente. Esto no se puede deshacer. ¿Continuar?`)) return;
+  await Libro.purgar(VAULT, esDeCartera(cid));
+  await recargarYrender();
+}
+async function borrarPersona(pid) {
+  const st = ESTADO; const p = st.personas[pid]; if (!p) return;
+  // carteras donde es el ÚNICO titular -> se eliminan en cascada
+  const cascada = Object.keys(st.carteras).filter(cid => {
+    const t = titularesDe(st, cid); return t.includes(pid) && t.length === 1;
+  });
+  const aviso = cascada.length
+    ? `Eliminar a ${nombreCompleto(p)} y ${cascada.length} cartera(s) individual(es) suya(s), con sus datos y movimientos, de forma permanente. En las conjuntas solo dejará de ser titular. ¿Continuar?`
+    : `Eliminar a ${nombreCompleto(p)} de forma permanente (dejará de ser titular en sus carteras conjuntas). ¿Continuar?`;
+  if (!confirm(aviso)) return;
+  const predsCarteras = cascada.map(esDeCartera);
+  const deberiaEliminar = (ev) => {
+    const pl = ev.payload || {};
+    if ((ev.tipo === 'alta_persona' || ev.tipo === 'edit_persona') && pl.id === pid) return true;
+    if ((ev.tipo === 'titular' || ev.tipo === 'quita_titular') && pl.persona === pid) return true;
+    return predsCarteras.some(fn => fn(ev));
+  };
+  await Libro.purgar(VAULT, deberiaEliminar);
+  SEL = null; await recargarYrender();
 }
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(()=>{});

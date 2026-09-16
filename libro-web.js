@@ -101,4 +101,21 @@ function patrimonio(estado, carteraId, fecha) {
   }
   return vf + (estado.liquidez[carteraId] || 0);
 }
-window.Libro = { VERSION_EVENTO, elegirCarpeta, permiso, leerHandle, cargarEventos, anexar, reconstruir, patrimonio };
+
+// Borrado real: reescribe los ficheros quitando los apuntes que cumplan el predicado.
+// Excepción deliberada al "solo se añade", solo para cancelar clientes/carteras.
+async function purgar(vault, deberiaEliminar) {
+  const dir = await subRegistros(vault);
+  for await (const [name, handle] of dir.entries()) {
+    if (!name.endsWith('.jsonl') || handle.kind !== 'file') continue;
+    const texto = await (await handle.getFile()).text();
+    const quedan = texto.split('\n').filter(x => x.trim()).filter(x => {
+      try { return !deberiaEliminar(JSON.parse(x)); } catch { return false; }
+    });
+    const w = await handle.createWritable();
+    await w.write(quedan.length ? quedan.join('\n') + '\n' : '');
+    await w.close();
+  }
+}
+
+window.Libro = { VERSION_EVENTO, elegirCarpeta, permiso, leerHandle, cargarEventos, anexar, reconstruir, patrimonio, purgar };
