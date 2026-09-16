@@ -232,30 +232,60 @@ function renderInformes(){
   genInforme();
 }
 function genInforme(){
-  const st=ESTADO; const cli=st.personas[SELCLI]; if(!cli){ $('doc').innerHTML=''; return; }
+  const st=ESTADO, cli=st.personas[SELCLI]; if(!cli){ $('doc').innerHTML=''; return; }
   const cids=[...document.querySelectorAll('.icart:checked')].map(i=>i.value);
-  const patTotal=cids.reduce((a,cid)=>a+Libro.patrimonio(st,cid),0);
-  const valF=cids.reduce((a,cid)=>a+Object.entries(st.posiciones).filter(([k,t])=>k.split('|')[0]===cid&&Math.abs(t)>1e-8).reduce((s,[k,t])=>{const vl=vlUlt(st,k.split('|')[1]); return s+(vl?t*vl:0);},0),0);
-  const liq=cids.reduce((a,cid)=>a+(st.liquidez[cid]||0),0);
+  if(!cids.length){ $('doc').innerHTML='<div class="page"><div class="muted">Marca al menos una cartera.</div></div>'; return; }
+  const e0=n=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:0}).format(Math.round(n||0))+' €';
+  const p2=n=>(n>=0?'+':'')+new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}).format((n||0)*100)+' %';
+  const p1=n=>new Intl.NumberFormat('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1}).format((n||0)*100)+' %';
+  const t4=n=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:4}).format(n||0);
+  const patTotal=cids.reduce((a,c)=>a+Libro.patrimonio(st,c),0);
+  const valF=patTotal-cids.reduce((a,c)=>a+(st.liquidez[c]||0),0);
   const prod=productos(st,cids);
-  const detalle=cids.map(cid=>{
-    const c=st.carteras[cid]; const pat=Libro.patrimonio(st,cid);
-    const rows=Object.entries(st.posiciones).filter(([k,t])=>k.split('|')[0]===cid&&Math.abs(t)>1e-8).map(([k,t])=>{const inst=k.split('|')[1]; const vl=vlUlt(st,inst); const val=vl?t*vl:null; return `<tr><td>${st.instrumentos[inst]?.nombre||'—'}</td><td class="num">${new Intl.NumberFormat('es-ES',{maximumFractionDigits:4}).format(t)}</td><td class="num">${vl?new Intl.NumberFormat('es-ES',{maximumFractionDigits:4}).format(vl):'—'}</td><td class="num">${val!=null?eur(val):'—'}</td><td class="num">${val!=null?pct(val/pat):'—'}</td></tr>`;}).join('');
-    return `<h3 class="car">${c.nombre} · ${c.tipo} · ${titularesDe(st,cid).map(p=>nom(st.personas[p])).join(', ')}</h3>
-      <table><thead><tr><th>Fondo</th><th class="num">Títulos</th><th class="num">VL</th><th class="num">Valor</th><th class="num">Peso</th></tr></thead>
-        <tbody>${rows}<tr class="liq"><td>Liquidez</td><td class="num">—</td><td class="num">—</td><td class="num">${eur(st.liquidez[cid]||0)}</td><td class="num">${pct((st.liquidez[cid]||0)/pat)}</td></tr>
-        <tr class="tot"><td>Total</td><td></td><td></td><td class="num">${eur(pat)}</td><td class="num">100,0 %</td></tr></tbody></table>`;
-  }).join('');
-  $('doc').innerHTML=`<div class="page"><div class="htop"><div class="t">${nom(cli).toUpperCase()}<small>INFORME DE CARTERA</small></div><div class="r">A 31/08/2026 · ${IDIOMAS[cli.idioma||'es']}</div></div>
-    <div class="kpirow" style="margin-top:16px">
-      <div class="kpi"><div class="k">Patrimonio</div><div class="v">${eur(patTotal)}</div></div>
-      <div class="kpi"><div class="k">En fondos</div><div class="v">${eur(valF)}</div></div>
-      <div class="kpi"><div class="k">Liquidez</div><div class="v">${eur(liq)}</div></div></div>
-    <h2 class="sec2">Patrimonio por producto</h2>
-    <table><thead><tr><th>Producto</th><th class="num">Valor</th><th class="num">Peso</th></tr></thead>
-      <tbody>${prod.map(p=>`<tr><td>${p.nombre}</td><td class="num">${eur(p.valor)}</td><td class="num">${pct(p.pct)}</td></tr>`).join('')}</tbody></table>
-    <h2 class="sec2">Detalle de posiciones</h2>${detalle}
-    <div class="foot2">Informe confidencial · uso exclusivo del cliente · ${nom(cli)}</div></div>`;
+  // agregar histórico anual por año
+  const anualMap={};
+  cids.forEach(c=>(st.hist[c]?.anual||[]).forEach(y=>{const o=anualMap[y.a]||(anualMap[y.a]={a:y.a,ini:0,fin:0,ap:0,re:0,res:0});o.ini+=y.ini||0;o.fin+=y.fin||0;o.ap+=y.ap||0;o.re+=y.re||0;o.res+=(y.res!=null?y.res:0);}));
+  const A=Object.values(anualMap).sort((x,y)=>x.a-y.a).map(y=>({...y,rent:y.ini?y.res/y.ini:null}));
+  // mensual: la cartera con más meses
+  let M=[]; cids.forEach(c=>{const m=st.hist[c]?.mensual||[]; if(m.length>M.length) M=m;});
+  const ops=cids.flatMap(c=>st.hist[c]?.operaciones||[]);
+  const last=A[A.length-1]||{};
+  const desdeIni=A.reduce((a,y)=>a*(1+(y.rent||0)),1)-1;
+  const apPer=last.ap||0, rePer=last.re||0, apTot=A.reduce((a,y)=>a+(y.ap||0),0), reTot=A.reduce((a,y)=>a+(y.re||0),0);
+  const ultMes=M.length?M[M.length-1]:null;
+  // charts
+  const donut=(segs)=>{const tot=segs.reduce((s,x)=>s+x.v,0)||1,r=60,C=2*Math.PI*r;let off=0,g='';const col=['#8E7577','#E5D0D2','#575755','#B79A9C','#C9B9BA','#7d6a6b','#ddc8c9','#9c8788'];
+    segs.forEach((sg,i)=>{const d=sg.v/tot*C;g+=`<circle cx="80" cy="80" r="${r}" fill="none" stroke="${col[i%col.length]}" stroke-width="28" stroke-dasharray="${d} ${C-d}" stroke-dashoffset="${-off}" transform="rotate(-90 80 80)"/>`;off+=d;});
+    const leg=segs.map((sg,i)=>`<div class="it"><span class="sw" style="background:${col[i%col.length]}"></span>${sg.n}<b> ${p1(sg.v/tot)}</b></div>`).join('');
+    return `<div class="donut"><svg viewBox="0 0 160 160" style="width:150px">${g}<text x="80" y="76" text-anchor="middle" font-size="8" fill="#575755">TOTAL</text><text x="80" y="92" text-anchor="middle" font-size="12" font-weight="800">${e0(tot)}</text></svg><div class="leg">${leg}</div></div>`;};
+  const linea=(vals)=>{if(!vals.length)return '<div class="muted">Sin evolución mensual.</div>';const W=720,H=180,pL=40,pR=14,pT=18,pB=22;const cum=[];let acc=1;vals.forEach(v=>{acc*=(1+v);cum.push(acc-1);});const lo=Math.min(0,...cum),hi=Math.max(...cum)+0.01;const X=i=>pL+i*((W-pL-pR)/(cum.length-1||1)),Y=v=>pT+(H-pT-pB)*(1-(v-lo)/((hi-lo)||1));let g='';for(let k=0;k<=3;k++){const v=lo+(hi-lo)*k/3;g+=`<line x1="${pL}" y1="${Y(v)}" x2="${W-pR}" y2="${Y(v)}" stroke="#EFE7E7"/><text x="${pL-5}" y="${Y(v)+3}" text-anchor="end" font-size="8" fill="#999">${p1(v)}</text>`;}const pts=cum.map((v,i)=>`${X(i)},${Y(v)}`).join(' ');g+=`<polygon points="${pL},${Y(lo)} ${pts} ${W-pR},${Y(lo)}" fill="#8E7577" fill-opacity="0.1"/><polyline points="${pts}" fill="none" stroke="#8E7577" stroke-width="2"/>`;cum.forEach((v,i)=>{g+=`<circle cx="${X(i)}" cy="${Y(v)}" r="2.5" fill="#8E7577"/><text x="${X(i)}" y="${Y(v)-7}" text-anchor="middle" font-size="8" font-weight="700">${p1(v)}</text>`;});return `<div class="chart"><svg viewBox="0 0 ${W} ${H}">${g}</svg></div>`;};
+  const barras=(labels,vals)=>{if(!vals.length)return '';const W=560,H=170,pL=34,pR=10,pT=16,pB=22;const lo=Math.min(0,...vals),hi=Math.max(0,...vals),pad=(hi-lo)*0.15||0.02;const y0=lo-pad,y1=hi+pad,step=(W-pL-pR)/vals.length,bw=step*0.6,Y=v=>pT+(H-pT-pB)*(1-(v-y0)/((y1-y0)||1));let g=`<line x1="${pL}" y1="${Y(0)}" x2="${W-pR}" y2="${Y(0)}" stroke="#D9CFCF"/>`;vals.forEach((v,i)=>{const x=pL+i*step+step/2-bw/2,yt=Y(Math.max(0,v)),yb=Y(Math.min(0,v));g+=`<rect x="${x}" y="${yt}" width="${bw}" height="${Math.max(1,yb-yt)}" rx="2" fill="${v<0?'#575755':'#A98A8C'}"/><text x="${x+bw/2}" y="${v<0?yb+10:yt-3}" text-anchor="middle" font-size="8" font-weight="700">${p1(v)}</text><text x="${x+bw/2}" y="${H-8}" text-anchor="middle" font-size="8" fill="#575755">${labels[i]}</text>`;});return `<div class="chart"><svg viewBox="0 0 ${W} ${H}">${g}</svg></div>`;};
+  const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const kpi=(k,v)=>`<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+  const AVISO='Este documento, así como los datos, opiniones y estimaciones contenidos en el mismo, han sido elaborados por GESIURIS ASSET MANAGEMENT, S.G.I.I.C., S.A. ("GESIURIS") con la finalidad de proporcionar a sus clientes información general a la fecha de emisión. Debido a su contenido meramente informativo, no puede tomarse en consideración para la toma de decisiones. Rentabilidades pasadas no garantizan rentabilidades futuras.';
+  const HT=(sub)=>`<div class="htop"><div class="t">${nom(cli).toUpperCase()}<small>INFORME DE CARTERA</small></div><div class="r">${sub}</div></div>`;
+  const FT=n=>`<div class="foot2"><span>Informe confidencial · uso exclusivo del cliente</span><span class="gg">GESIURIS</span><span>31/08/2026 · ${n}/3</span></div>`;
+  // P1
+  const compRows=prod.map(p=>`<tr><td>${p.nombre}</td><td class="num">${e0(p.valor)}</td><td class="num">${p1(p.pct)}</td></tr>`).join('');
+  const p1html=`<div class="page">${HT('Cierre 31/08/2026')}
+    <div class="kpirow" style="margin-top:14px">${kpi('Patrimonio',e0(patTotal))}${kpi('Resultado 2026',last.res!=null?e0(last.res):'—')}${kpi('Rentabilidad 2026',last.rent!=null?p1(last.rent):'—')}${kpi('Último mes',ultMes!=null?p1(ultMes):'—')}${kpi('Desde inicio',A.length?p1(desdeIni):'—')}</div>
+    <div class="cols2"><div><h2 class="sec2">Composición actual</h2><table><thead><tr><th>Instrumento</th><th class="num">Valor €</th><th class="num">Peso</th></tr></thead><tbody>${compRows}</tbody></table></div>
+      <div><h2 class="sec2">Distribución por pesos</h2>${donut(prod.map(p=>({n:p.nombre,v:p.valor})))}</div></div>
+    <h2 class="sec2">Evolución del año</h2>${linea(M)}${FT(1)}</div>`;
+  // P2
+  const arows=A.map(y=>`<tr><td>${y.a}</td><td class="num">${e0(y.ini)}</td><td class="num">${e0(y.fin)}</td><td class="num">${y.ap?e0(y.ap):'—'}</td><td class="num">${y.re?e0(y.re):'—'}</td><td class="num">${y.res!=null?e0(y.res):'—'}</td><td class="num">${y.rent!=null?p1(y.rent):'—'}</td><td>${y.a>=2026?'En curso':'Cerrado'}</td></tr>`).join('');
+  const p2html=`<div class="page">${HT('2026 y perspectiva histórica')}
+    <h2 class="sec2">Detalle anual</h2><table class="anual"><thead><tr><th>Año</th><th class="num">Inicio €</th><th class="num">Fin €</th><th class="num">Aport. €</th><th class="num">Retir. €</th><th class="num">Resultado €</th><th class="num">Rent.</th><th>Estado</th></tr></thead><tbody>${arows||'<tr><td colspan="8" class="muted">Sin histórico anual para esta cartera.</td></tr>'}</tbody></table>
+    <div class="cols2" style="margin-top:12px"><div><h2 class="sec2">Rentabilidad mensual 2026</h2>${barras(MES,M)}</div><div><h2 class="sec2">Rentabilidad anual</h2>${barras(A.map(y=>y.a),A.map(y=>y.rent||0))}</div></div>${FT(2)}</div>`;
+  // P3
+  const orows=ops.map(o=>`<tr><td>${o.fecha}</td><td>${o.op}</td><td>${o.inst}</td><td class="num">${o.imp!=null?new Intl.NumberFormat('es-ES',{maximumFractionDigits:0}).format(o.imp):''}</td><td class="num">${o.precio!=null?t4(o.precio):''}</td><td class="num">${o.tit!=null?t4(o.tit):''}</td></tr>`).join('');
+  const p3html=`<div class="page">${HT('Operaciones y movimientos')}
+    <h2 class="sec2">Operaciones recientes</h2><table><thead><tr><th>Fecha</th><th>Operación</th><th>Instrumento</th><th class="num">Importe €</th><th class="num">Precio</th><th class="num">Títulos</th></tr></thead><tbody>${orows||'<tr><td colspan="6" class="muted">Sin operaciones.</td></tr>'}</tbody></table>
+    <h2 class="sec2" style="margin-top:14px">Aportaciones y disposiciones</h2>
+    <div class="cols2"><div class="card2"><div class="r2"><span>Aportaciones 2026</span><b>${e0(apPer)}</b></div><div class="r2"><span>Disposiciones 2026</span><b>${e0(rePer)}</b></div></div>
+      <div class="card2"><div class="r2"><span>Aportaciones desde inicio</span><b>${e0(apTot)}</b></div><div class="r2"><span>Disposiciones desde inicio</span><b>${e0(reTot)}</b></div></div></div>
+    <h2 class="sec2" style="margin-top:14px">Aviso legal</h2><div class="aviso2">${AVISO}</div>${FT(3)}</div>`;
+  $('doc').innerHTML=p1html+p2html+p3html;
 }
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(()=>{});
