@@ -74,6 +74,7 @@ function render() {
 }
 async function apuntar(lista) { for (const [tipo, payload] of lista) await Libro.anexar(VAULT, AUTOR, tipo, payload); }
 const titularesDe = (st, cid) => [...(st.titulares[cid] || [])];
+const vlUlt = (st, inst) => { const m = st.vl[inst] || {}; const fs = Object.keys(m).sort(); return fs.length ? m[fs[fs.length-1]] : null; };
 const cartsDe = (st, pid) => Object.entries(st.carteras).filter(([cid, c]) => !c.baja && titularesDe(st, cid).includes(pid)).map(([cid, c]) => ({ cid, ...c }));
 
 // ---------------- Clientes ----------------
@@ -86,8 +87,30 @@ function renderClientes() {
     <div class="n">${nombreCompleto(p)}</div>
     <div class="m">${cartsDe(st,p.id).length} cartera(s)</div></div>`).join('') || '<div class="muted">Sin personas todavía.</div>';
 
+  // resumen
+  const cActivas = Object.entries(st.carteras).filter(([,c]) => !c.baja);
+  const patrTotal = cActivas.reduce((acc, [cid]) => acc + Libro.patrimonio(st, cid), 0);
+  const prod = {};
+  for (const [k, tit] of Object.entries(st.posiciones)) {
+    const [cid, inst] = k.split('|');
+    if (st.carteras[cid]?.baja || Math.abs(tit) < 1e-8) continue;
+    const vl = vlUlt(st, inst); if (vl == null) continue;
+    prod[inst] = (prod[inst] || 0) + tit * vl;
+  }
+  const totInv = Object.values(prod).reduce((a, b) => a + b, 0) || 1;
+  const filasProd = Object.entries(prod).sort((a, b) => b[1] - a[1]).map(([inst, val]) =>
+    `<tr><td>${st.instrumentos[inst]?.nombre || '—'}</td><td class="num">${eur(val)}</td><td class="num">${(val/totInv*100).toLocaleString('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1})} %</td></tr>`).join('');
+
   $('view').innerHTML = `
     <h1>Clientes</h1>
+    <div class="card"><h2>Resumen</h2>
+      <div class="kpis3">
+        <div class="mini"><div class="k">Clientes</div><div class="v">${personas.length}</div></div>
+        <div class="mini"><div class="k">Carteras</div><div class="v">${cActivas.length}</div></div>
+        <div class="mini"><div class="k">Patrimonio total</div><div class="v">${eur(patrTotal)}</div></div>
+      </div>
+      ${filasProd ? `<table style="margin-top:12px"><thead><tr><th>Producto</th><th class="num">Valor</th><th class="num">Peso</th></tr></thead><tbody>${filasProd}</tbody></table>` : '<p class="muted" style="margin-top:8px">Sin productos todavía.</p>'}
+    </div>
     <div class="split">
       <div class="card">
         <h2>Personas</h2>
