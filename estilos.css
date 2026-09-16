@@ -50,3 +50,16 @@ select{padding:7px 9px;border:1px solid var(--amarillo-b);border-radius:7px;font
 .mini{flex:1;min-width:140px;background:var(--beige);border-radius:8px;padding:12px 14px}
 .mini .k{color:var(--gris);font-size:11.5px}
 .mini .v{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:2px}
+.field{margin-bottom:11px}.field label{display:block;font-size:11.5px;color:var(--gris);margin-bottom:3px}
+.err{color:var(--error);font-size:12px;margin:4px 0;min-height:15px}
+.tot td{font-weight:700;border-top:1px solid var(--linea);background:var(--salmon-pal)}
+.htop{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid var(--salmon-osc);padding-bottom:8px}
+.htop .t{font-size:20px;font-weight:800;color:var(--salmon-osc)}.htop .t small{display:block;font-size:9px;letter-spacing:3px;color:var(--gris)}
+.htop .r{font-size:12px;color:var(--gris);font-style:italic}
+.kpirow{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.kpi{flex:1;min-width:130px;background:var(--beige);border-radius:8px;padding:10px 14px}.kpi .k{font-size:11px;color:var(--gris)}.kpi .v{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
+.sec2{font-size:13px;color:var(--salmon-osc);border-bottom:1px solid var(--linea);padding-bottom:5px;margin:18px 0 8px}
+.car{font-size:12.5px;margin:14px 0 6px}
+.doc,.page{background:#fff}.page{border:1px solid var(--linea);border-radius:8px;padding:20px}
+.foot2{margin-top:20px;border-top:1px solid var(--linea);padding-top:6px;color:var(--gris);font-size:10px}
+@media print{.top,.tabs,.no-print{display:none!important}.wrap{padding:0}.page{border:none}}
