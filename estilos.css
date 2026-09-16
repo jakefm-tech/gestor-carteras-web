@@ -31,3 +31,9 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 .hidden{display:none}
 .badge{font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:20px;background:var(--salmon-pal);color:var(--salmon-osc)}
 .soon{color:var(--gris);font-size:13px;background:var(--beige);border:1px dashed var(--linea);border-radius:8px;padding:24px;text-align:center;margin-top:16px}
+.chk{display:inline-flex;gap:6px;align-items:center;font-size:13.5px;margin-right:14px}
+.chks{display:flex;flex-wrap:wrap;gap:8px 4px}
+select{padding:7px 9px;border:1px solid var(--amarillo-b);border-radius:7px;font-size:13px;background:var(--amarillo);font-family:inherit;margin-top:6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--salmon-cla);color:#5f4446;border-radius:20px;padding:3px 10px;font-size:12px}
+.chip button{background:none;border:none;color:#5f4446;cursor:pointer;font-size:13px;padding:0;line-height:1}
