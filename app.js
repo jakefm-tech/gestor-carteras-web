@@ -6,7 +6,7 @@ const esc = (s) => String(s==null?'':s).replace(/"/g,'&quot;');
 const IDIOMAS = {es:'Español',ca:'Català',en:'English'};
 const TIPOS_MOV = ['Compra','Venta','Aportación','Disposición','Dividendo','Comisión'];
 
-let VAULT=null, AUTOR=localStorage.getItem('autor')||null, ESTADO=null, SEL=null, SELC=null, SELCLI=null;
+let VAULT=null, AUTOR=localStorage.getItem('autor')||null, ESTADO=null, SEL=null, SELC=null, SELCLI=null, NUEVO=false, FILTRO='';
 
 async function boot(){
   if(!('showDirectoryPicker' in window)){ pantallaNavegador(); return; }
@@ -88,6 +88,8 @@ function renderAnalisis(){
   const bookAnual=Object.keys(bookY).sort().map(a=>({a:+a,rent:bookY[a].ini?bookY[a].res/bookY[a].ini:0}));
   const rentsBook=bookAnual.map(y=>y.rent);
   const vol=stdev(rentsBook), dd=maxDD(rentsBook);
+  const half=Math.ceil(prod.length/2);
+  const tprod=arr=>`<table><thead><tr><th>Producto</th><th>ISIN</th><th class="num">Valor</th><th class="num">Peso</th></tr></thead><tbody>${arr.map(p=>`<tr><td>${p.nombre}</td><td class="muted" style="font-size:11px;white-space:nowrap">${st.instrumentos[p.inst]?.isin||'—'}</td><td class="num">${eur(p.valor)}</td><td class="num">${pct(p.pct)}</td></tr>`).join('')||'<tr><td colspan="4" class="muted">Sin datos.</td></tr>'}</tbody></table>`;
   $('view').innerHTML=`<h1>Análisis de la cartera</h1>
     <div class="card"><h2>Resumen</h2>
       <div class="kpis3">
@@ -103,9 +105,8 @@ function renderAnalisis(){
         <div class="mini"><div class="k">Mayor producto</div><div class="v" style="font-size:17px">${prod[0]?pct(prod[0].pct):'—'}</div></div>
       </div></div>
     <div class="card"><h2>Patrimonio por producto</h2>
-      <div class="cols2"><div><table><thead><tr><th>Producto</th><th class="num">Valor</th><th class="num">Peso</th><th class="num">Carteras</th></tr></thead>
-        <tbody>${prod.map(p=>`<tr><td>${p.nombre}</td><td class="num">${eur(p.valor)}</td><td class="num">${pct(p.pct)}</td><td class="num">${p.n}</td></tr>`).join('')||'<tr><td colspan="4" class="muted">Sin datos.</td></tr>'}</tbody></table></div>
-        <div>${prod.length?donutSVG(prod.slice(0,8).map(p=>({n:p.nombre,v:p.valor}))):''}</div></div></div>
+      <div class="cols2"><div>${tprod(prod.slice(0,half))}</div><div>${tprod(prod.slice(half))}</div></div>
+      <div style="display:flex;justify-content:center;margin-top:20px">${prod.length?donutSVG(prod.slice(0,8).map(p=>({n:p.nombre,v:p.valor}))):''}</div></div>
     <div class="card"><h2>Riesgo (histórico anual del conjunto)</h2>
       <div class="kpis3"><div class="mini"><div class="k">Volatilidad anual</div><div class="v" style="font-size:18px">${bookAnual.length?pct(vol):'—'}</div></div>
         <div class="mini"><div class="k">Caída máxima</div><div class="v" style="font-size:18px">${bookAnual.length?pct(dd):'—'}</div></div>
@@ -122,21 +123,42 @@ function renderAnalisis(){
 
 // ============ CLIENTES ============
 function renderClientes(){
-  const st=ESTADO; const personas=Object.values(st.personas); if(SEL&&!st.personas[SEL]) SEL=null;
-  const lista=personas.map(p=>`<div class="item ${p.id===SEL?'sel':''}" data-pid="${p.id}"><div class="n">${nom(p)}</div><div class="m">${cartsDe(st,p.id).length} cartera(s)</div></div>`).join('')||'<div class="muted">Sin personas.</div>';
+  const st=ESTADO; if(SEL&&!st.personas[SEL]) SEL=null;
+  const personas=Object.values(st.personas).sort((a,b)=>nom(a).localeCompare(nom(b)));
+  const f=FILTRO.toLowerCase();
+  const lista=personas.filter(p=>nom(p).toLowerCase().includes(f)).map(p=>`<div class="item ${(p.id===SEL&&!NUEVO)?'sel':''}" data-pid="${p.id}"><div class="n">${nom(p)}</div><div class="m">${cartsDe(st,p.id).length} cartera(s)</div></div>`).join('')||'<div class="muted" style="padding:8px">Sin resultados.</div>';
   $('view').innerHTML=`<h1>Clientes</h1>
     <div class="split">
-      <div class="card"><h2>Personas</h2><div id="lp">${lista}</div>
-        <div style="margin-top:12px;border-top:1px solid var(--linea);padding-top:12px">
-          <div class="row"><input id="nom" placeholder="Nombre"><input id="ape" placeholder="Apellidos"></div>
-          <div class="row" style="margin-top:8px"><label class="chk"><input type="checkbox" id="ci" checked> con cartera individual</label>
-            <button class="primary" id="bAlta">Añadir persona</button></div></div></div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">Personas <span class="muted" style="font-weight:400">(${personas.length})</span></h2><button class="primary" id="bNuevo">+ Nuevo cliente</button></div>
+        <input id="buscar" placeholder="Buscar cliente…" value="${esc(FILTRO)}" style="width:100%;background:#fff;border-color:var(--linea);margin:12px 0">
+        <div class="listaP">${lista}</div>
+      </div>
       <div class="card" id="ficha"></div></div>`;
-  document.querySelectorAll('.item').forEach(e=>e.onclick=()=>{ SEL=e.dataset.pid; renderClientes(); });
-  $('bAlta').onclick=altaPersona; renderFicha();
+  document.querySelectorAll('.item').forEach(e=>e.onclick=()=>{ SEL=e.dataset.pid; NUEVO=false; renderClientes(); });
+  $('bNuevo').onclick=()=>{ NUEVO=true; SEL=null; renderClientes(); };
+  const bb=$('buscar'); bb.oninput=()=>{ FILTRO=bb.value; const ff=FILTRO.toLowerCase(); document.querySelectorAll('.item').forEach(el=>{ el.style.display=nom(st.personas[el.dataset.pid]).toLowerCase().includes(ff)?'':'none'; }); };
+  if(NUEVO) renderFichaNueva(); else renderFicha();
+}
+function renderFichaNueva(){
+  $('ficha').innerHTML=`<h2>Nuevo cliente</h2>
+    <p class="muted" style="margin-top:-6px;margin-bottom:14px">Rellena los datos y pulsa Crear. Después podrás añadirle carteras.</p>
+    <div class="row"><input id="nfn" placeholder="Nombre"><input id="nfa" placeholder="Apellidos"></div>
+    <div class="row" style="margin-top:8px"><input id="nfe" placeholder="Email"><input id="nft" placeholder="Teléfono"></div>
+    <div class="row" style="margin-top:8px"><label class="chk">Idioma <select id="nfi">${Object.entries(IDIOMAS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label>
+      <label class="chk"><input type="checkbox" id="nci" checked> crear su cartera individual</label></div>
+    <div class="row" style="margin-top:16px"><button class="primary" id="bCrear">Crear cliente</button><button class="ghost" id="bCanc">Cancelar</button><span class="err" id="nerr"></span></div>`;
+  $('bCrear').onclick=crearCliente; $('bCanc').onclick=()=>{ NUEVO=false; renderClientes(); };
+}
+async function crearCliente(){
+  const n=$('nfn').value.trim(); if(!n){ $('nerr').textContent='El nombre es obligatorio.'; return; }
+  const pid=crypto.randomUUID();
+  const l=[['alta_persona',{id:pid,nombre:n,apellidos:$('nfa').value.trim(),email:$('nfe').value.trim(),telefono:$('nft').value.trim(),idioma:$('nfi').value}]];
+  if($('nci').checked){ const cid=crypto.randomUUID(); l.push(['alta_cartera',{id:cid,nombre:'Cartera individual',tipo:'individual'}]); l.push(['titular',{cartera:cid,persona:pid}]); }
+  await apuntar(l); NUEVO=false; SEL=pid; await recargarYrender();
 }
 function renderFicha(){
-  const st=ESTADO, c=$('ficha'); if(!SEL){ c.innerHTML=`<h2>Ficha</h2><p class="muted">Selecciona una persona, o crea una nueva.</p>`; return; }
+  const st=ESTADO, c=$('ficha'); if(!SEL){ c.innerHTML=`<h2>Ficha</h2><p class="muted">Selecciona una persona de la lista, o pulsa “+ Nuevo cliente”.</p>`; return; }
   const p=st.personas[SEL], otras=Object.values(st.personas).filter(x=>x.id!==SEL);
   const cart=cartsDe(st,SEL).map(k=>{
     const t=titularesDe(st,k.cid);
@@ -204,7 +226,7 @@ function renderActualizar(){
       <div class="card"><h2>Nuevo movimiento</h2>
         <div class="field"><label>Tipo</label><select id="mt">${TIPOS_MOV.map(t=>`<option>${t}</option>`).join('')}</select></div>
         <div class="field" id="fInst"><label>Instrumento</label><select id="mi"><option value="">— Selecciona —</option>${insts.map(([id,i])=>`<option value="${id}">${i.nombre}</option>`).join('')}<option value="__n">+ Nuevo…</option></select></div>
-        <div class="field" id="fNew" style="display:none"><label>Nombre instrumento nuevo</label><input id="mnew"></div>
+        <div class="field" id="fNew" style="display:none"><label>Instrumento nuevo</label><input id="mnew" placeholder="Nombre"><input id="mnewisin" placeholder="ISIN (opcional)" style="margin-top:6px"></div>
         <div class="row"><div class="field"><label>Importe (€)</label><input id="mimp" inputmode="decimal"></div>
           <div class="field" id="fPre"><label>VL de compra</label><input id="mpre" inputmode="decimal"></div></div>
         <div class="field"><label>Fecha</label><input id="mf" type="date" value="2026-08-31"></div>
@@ -217,12 +239,17 @@ function renderActualizar(){
         <h2 style="margin-top:16px">Actualizar VL de un fondo</h2>
         <div class="row"><select id="vi">${insts.map(([id,i])=>`<option value="${id}">${i.nombre}</option>`).join('')}</select>
           <input id="vf" type="date" value="2026-08-31" style="background:#fff;border-color:var(--linea)"><input id="vv" inputmode="decimal" placeholder="VL" style="max-width:120px">
-          <button class="ghost" id="bVL">Guardar VL</button></div></div></div>`;
+          <button class="ghost" id="bVL">Guardar VL</button></div></div></div>
+    <div class="card"><h2>Instrumentos (ISIN)</h2>
+      <p class="muted" style="margin-top:-6px;margin-bottom:12px">Escribe el ISIN de cada producto. Aparece en Análisis y en los informes.</p>
+      <table><thead><tr><th>Instrumento</th><th>Tipo</th><th>ISIN</th></tr></thead>
+        <tbody>${insts.map(([id,i])=>`<tr><td>${i.nombre}</td><td class="muted">${i.tipo}</td><td><input data-isin="${id}" value="${esc(i.isin||'')}" placeholder="ES0000000000" style="background:#fff;border-color:var(--linea);width:190px"></td></tr>`).join('')}</tbody></table>
+      <div class="row" style="margin-top:12px"><button class="primary" id="bISIN">Guardar ISIN</button><span class="muted" id="isinmsg"></span></div></div>`;
   $('selc').onchange=e=>{ SELC=e.target.value; renderActualizar(); };
   const t=$('mt'), usaF=()=>['Compra','Venta'].includes(t.value);
   const sync=()=>{ $('fInst').style.display=usaF()?'':'none'; $('fPre').style.display=usaF()?'':'none'; $('fNew').style.display=(usaF()&&$('mi').value==='__n')?'':'none'; };
   t.onchange=sync; $('mi').onchange=sync; sync();
-  $('bMov').onclick=guardarMov; $('bVL').onclick=guardarVL;
+  $('bMov').onclick=guardarMov; $('bVL').onclick=guardarVL; if($('bISIN'))$('bISIN').onclick=guardarISIN;
 }
 const pnum=s=>{ s=String(s||'').trim().replace(/\s/g,''); if(!s) return NaN; if(s.includes(',')) s=s.replace(/\./g,'').replace(',','.'); return parseFloat(s); };
 async function guardarMov(){
@@ -233,7 +260,7 @@ async function guardarMov(){
     let mi=$('mi').value; const pre=pnum($('mpre').value);
     if(!mi){ $('me').textContent='Elige instrumento.'; return; }
     if(isNaN(pre)||pre<=0){ $('me').textContent='Falta el VL de compra.'; return; }
-    if(mi==='__n'){ const nm=$('mnew').value.trim(); if(!nm){ $('me').textContent='Nombre del instrumento nuevo.'; return; } instId=crypto.randomUUID(); ev.push(['alta_instrumento',{id:instId,nombre:nm,tipo:'fondo'}]); }
+    if(mi==='__n'){ const nm=$('mnew').value.trim(); if(!nm){ $('me').textContent='Nombre del instrumento nuevo.'; return; } instId=crypto.randomUUID(); ev.push(['alta_instrumento',{id:instId,nombre:nm,tipo:'fondo',isin:($('mnewisin')?$('mnewisin').value.trim():'')}]); }
     else instId=mi;
     const tit=imp/pre;
     ev.push(['vl',{instrumento:instId,fecha,valor:pre}]); // valora al VL de compra si no hay otro
@@ -246,6 +273,11 @@ async function guardarMov(){
 }
 async function guardarVL(){ const inst=$('vi').value, f=$('vf').value, v=pnum($('vv').value); if(isNaN(v)) return; await apuntar([['vl',{instrumento:inst,fecha:f,valor:v}]]); await recargarYrender(); }
 
+async function guardarISIN(){
+  const st=ESTADO; const cambios=[];
+  document.querySelectorAll('[data-isin]').forEach(inp=>{ const id=inp.dataset.isin, v=inp.value.trim(); if((st.instrumentos[id]&&st.instrumentos[id].isin||'')!==v) cambios.push(['edit_instrumento',{id,isin:v}]); });
+  if(cambios.length){ await apuntar(cambios); await recargarYrender(); if($('isinmsg'))$('isinmsg').textContent='Guardado.'; }
+}
 // ============ INFORMES ============
 function renderInformes(){
   const st=ESTADO; const personas=Object.values(st.personas);
@@ -296,10 +328,10 @@ function genInforme(){
   const HT=(sub)=>`<div class="htop"><div class="t">${nom(cli).toUpperCase()}<small>INFORME DE CARTERA</small></div><div class="r">${sub}</div></div>`;
   const FT=n=>`<div class="foot2"><span>Informe confidencial · uso exclusivo del cliente</span><span>31/08/2026 · ${n}/3</span></div>`;
   // P1
-  const compRows=prod.map(p=>`<tr><td>${p.nombre}</td><td class="num">${e0(p.valor)}</td><td class="num">${p1(p.pct)}</td></tr>`).join('');
+  const compRows=prod.map(p=>`<tr><td>${p.nombre}</td><td class="muted" style="font-size:10px;white-space:nowrap">${st.instrumentos[p.inst]?.isin||''}</td><td class="num">${e0(p.valor)}</td><td class="num">${p1(p.pct)}</td></tr>`).join('');
   const p1html=`<div class="page">${HT('Cierre 31/08/2026')}
     <div class="kpirow" style="margin-top:14px">${kpi('Patrimonio',e0(patTotal))}${kpi('Resultado 2026',last.res!=null?e0(last.res):'—')}${kpi('Rentabilidad 2026',last.rent!=null?p1(last.rent):'—')}${kpi('Último mes',ultMes!=null?p1(ultMes):'—')}</div>
-    <div class="cols2"><div><h2 class="sec2">Composición actual</h2><table><thead><tr><th>Instrumento</th><th class="num">Valor €</th><th class="num">Peso</th></tr></thead><tbody>${compRows}</tbody></table></div>
+    <div class="cols2"><div><h2 class="sec2">Composición actual</h2><table><thead><tr><th>Instrumento</th><th>ISIN</th><th class="num">Valor €</th><th class="num">Peso</th></tr></thead><tbody>${compRows}</tbody></table></div>
       <div><h2 class="sec2">Distribución por pesos</h2>${donut(prod.map(p=>({n:p.nombre,v:p.valor})))}</div></div>
     <h2 class="sec2">Evolución del año</h2>${linea(M)}${FT(1)}</div>`;
   // P2

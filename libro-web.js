@@ -67,6 +67,7 @@ function reconstruir(eventos) {
       case 'alta_persona':     e.personas[p.id] = p; break;
       case 'edit_persona':     e.personas[p.id] = Object.assign(e.personas[p.id] || {}, p); break;
       case 'alta_instrumento': e.instrumentos[p.id] = p; break;
+      case 'edit_instrumento': e.instrumentos[p.id] = Object.assign(e.instrumentos[p.id] || {}, p); break;
       case 'vl':               (e.vl[p.instrumento] ||= {})[p.fecha] = p.valor; break;
       case 'alta_cartera':     e.carteras[p.id] = p; break;
       case 'edit_cartera':     e.carteras[p.id] = Object.assign(e.carteras[p.id] || {}, p); break;
