@@ -113,3 +113,19 @@ select{max-width:100%}
 #doc .card2{border:1px solid var(--linea)}
 #doc .aviso2{background:var(--beige);border:1px solid var(--linea);border-radius:8px;padding:12px 14px}
 #doc .foot2 .gg{color:var(--salmon-osc)}
+/* ---- Informe: cajas de sección y KPI con icono ---- */
+#doc .kpirow{display:flex;gap:10px;margin:14px 0}
+#doc .kpi{flex:1;display:flex;gap:11px;align-items:center;background:var(--beige);border:1px solid var(--linea);border-top:none;border-radius:9px;padding:12px 14px;text-align:left}
+#doc .kic{width:32px;height:32px;flex:none;border-radius:8px;background:var(--salmon-cla);color:var(--salmon-osc);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800}
+#doc .kpi .k{font-size:8.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--gris)}
+#doc .kpi .v{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;margin-top:2px}
+#doc .secbar{background:var(--salmon-osc);color:#fff;border-radius:6px 6px 0 0;padding:8px 14px;margin-top:16px;
+  font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;gap:10px}
+#doc .secbar .st{display:flex;align-items:center;gap:9px}
+#doc .secbar .st::before{content:'';width:4px;height:14px;background:var(--salmon-cla);border-radius:2px}
+#doc .secbar .cap{font-weight:400;font-size:9.5px;font-style:italic;text-transform:none;opacity:.9;letter-spacing:0}
+#doc .panel{border:1px solid var(--linea);border-top:none;border-radius:0 0 8px 8px;padding:12px 14px}
+#doc .panel.pc{display:flex;justify-content:center;align-items:center;min-height:150px}
+#doc .panel table{margin:0}
+#doc .isin{font-size:9.5px;color:var(--gris);white-space:nowrap}
+#doc .riesgo{margin:8px 2px 0;font-size:11px;color:#4b4642}
