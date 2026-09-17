@@ -62,31 +62,61 @@ function productos(st, cids){
 }
 
 // ============ ANÁLISIS ============
+function stdev(a){if(a.length<2)return 0;const m=a.reduce((x,y)=>x+y,0)/a.length;return Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/(a.length-1));}
+function maxDD(rents){let idx=1,peak=1,dd=0;for(const r of rents){idx*=(1+(r||0));peak=Math.max(peak,idx);dd=Math.min(dd,idx/peak-1);}return dd;}
+function barSVG(labels,vals){if(!vals.length)return '';const W=560,H=150,pL=32,pR=8,pT=14,pB=20;const lo=Math.min(0,...vals),hi=Math.max(0,...vals),pad=(hi-lo)*0.15||0.02;const y0=lo-pad,y1=hi+pad,step=(W-pL-pR)/vals.length,bw=step*0.6,Y=v=>pT+(H-pT-pB)*(1-(v-y0)/((y1-y0)||1));let g=`<line x1="${pL}" y1="${Y(0)}" x2="${W-pR}" y2="${Y(0)}" stroke="#D9CFCF"/>`;vals.forEach((v,i)=>{const x=pL+i*step+step/2-bw/2,yt=Y(Math.max(0,v)),yb=Y(Math.min(0,v));g+=`<rect x="${x}" y="${yt}" width="${bw}" height="${Math.max(1,yb-yt)}" rx="2" fill="${v<0?'#575755':'#A98A8C'}"/><text x="${x+bw/2}" y="${v<0?yb+9:yt-3}" text-anchor="middle" font-size="8" font-weight="700">${(v>=0?'+':'')+(v*100).toFixed(1)}%</text><text x="${x+bw/2}" y="${H-7}" text-anchor="middle" font-size="8" fill="#575755">${labels[i]}</text>`;});return `<div class="chart"><svg viewBox="0 0 ${W} ${H}">${g}</svg></div>`;}
+function donutSVG(segs){const tot=segs.reduce((s,x)=>s+x.v,0)||1,r=58,C=2*Math.PI*r;let off=0,g='';const col=['#8E7577','#E5D0D2','#575755','#B79A9C','#C9B9BA','#7d6a6b','#ddc8c9','#9c8788'];
+  segs.forEach((sg,i)=>{const d=sg.v/tot*C;g+=`<circle cx="78" cy="78" r="${r}" fill="none" stroke="${col[i%col.length]}" stroke-width="26" stroke-dasharray="${d} ${C-d}" stroke-dashoffset="${-off}" transform="rotate(-90 78 78)"/>`;off+=d;});
+  const leg=segs.map((sg,i)=>`<div class="it"><span class="sw" style="background:${col[i%col.length]}"></span>${sg.n} <b>${pct(sg.v/tot)}</b></div>`).join('');
+  return `<div class="donut"><svg viewBox="0 0 156 156" style="width:150px;flex:none">${g}</svg><div class="leg">${leg}</div></div>`;}
 function renderAnalisis(){
   const st=ESTADO; const act=carterasActivas(st);
   const patCart=act.map(c=>({...c,pat:Libro.patrimonio(st,c.cid)}));
-  const patTotal=patCart.reduce((a,c)=>a+c.pat,0);
+  const patTotal=patCart.reduce((a,c)=>a+c.pat,0)||1;
   const liqTotal=act.reduce((a,c)=>a+(st.liquidez[c.cid]||0),0);
   const prod=productos(st, act.map(c=>c.cid));
-  // concentración: top clientes por patrimonio (sumando sus carteras)
+  // concentración: una cartera conjunta se reparte entre sus titulares (no cuenta entera a cada uno)
   const porPersona={};
-  for(const c of patCart) for(const pid of titularesDe(st,c.cid)) porPersona[pid]=(porPersona[pid]||0)+c.pat;
-  const topCli=Object.entries(porPersona).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  for(const c of patCart){const ts=titularesDe(st,c.cid); const share=c.pat/(ts.length||1); for(const pid of ts) porPersona[pid]=(porPersona[pid]||0)+share;}
+  const ranking=Object.entries(porPersona).sort((a,b)=>b[1]-a[1]);
+  const topCli=ranking.slice(0,5);
+  const top5pct=topCli.reduce((a,[,v])=>a+v,0)/patTotal;
+  const nClientes=Object.keys(st.personas).length;
+  // riesgo del conjunto desde la serie anual (agregada por año)
+  const bookY={};
+  act.forEach(c=>(st.hist[c.cid]?.anual||[]).forEach(y=>{const o=bookY[y.a]||(bookY[y.a]={ini:0,res:0});o.ini+=y.ini||0;o.res+=(y.res!=null?y.res:0);}));
+  const bookAnual=Object.keys(bookY).sort().map(a=>({a:+a,rent:bookY[a].ini?bookY[a].res/bookY[a].ini:0}));
+  const rentsBook=bookAnual.map(y=>y.rent);
+  const vol=stdev(rentsBook), dd=maxDD(rentsBook);
   $('view').innerHTML=`<h1>Análisis de la cartera</h1>
     <div class="card"><h2>Resumen</h2>
       <div class="kpis3">
-        <div class="mini"><div class="k">Clientes</div><div class="v">${Object.keys(st.personas).length}</div></div>
+        <div class="mini"><div class="k">Clientes</div><div class="v">${nClientes}</div></div>
         <div class="mini"><div class="k">Carteras</div><div class="v">${act.length}</div></div>
         <div class="mini"><div class="k">Patrimonio total</div><div class="v">${eur(patTotal)}</div></div>
-        <div class="mini"><div class="k">Liquidez</div><div class="v">${pct(liqTotal/(patTotal||1))}</div></div>
+        <div class="mini"><div class="k">Liquidez</div><div class="v">${pct(liqTotal/patTotal)}</div></div>
+      </div>
+      <div class="kpis3" style="margin-top:12px">
+        <div class="mini"><div class="k">Patrimonio medio / cartera</div><div class="v" style="font-size:17px">${eur(patTotal/(act.length||1))}</div></div>
+        <div class="mini"><div class="k">Nº de productos</div><div class="v">${prod.length}</div></div>
+        <div class="mini"><div class="k">Peso 5 mayores clientes</div><div class="v" style="font-size:17px">${pct(top5pct)}</div></div>
+        <div class="mini"><div class="k">Mayor producto</div><div class="v" style="font-size:17px">${prod[0]?pct(prod[0].pct):'—'}</div></div>
       </div></div>
     <div class="card"><h2>Patrimonio por producto</h2>
-      <table><thead><tr><th>Producto</th><th class="num">Valor</th><th class="num">Peso</th><th class="num">Carteras</th></tr></thead>
+      <div class="cols2"><div><table><thead><tr><th>Producto</th><th class="num">Valor</th><th class="num">Peso</th><th class="num">Carteras</th></tr></thead>
         <tbody>${prod.map(p=>`<tr><td>${p.nombre}</td><td class="num">${eur(p.valor)}</td><td class="num">${pct(p.pct)}</td><td class="num">${p.n}</td></tr>`).join('')||'<tr><td colspan="4" class="muted">Sin datos.</td></tr>'}</tbody></table></div>
+        <div>${prod.length?donutSVG(prod.slice(0,8).map(p=>({n:p.nombre,v:p.valor}))):''}</div></div></div>
+    <div class="card"><h2>Riesgo (histórico anual del conjunto)</h2>
+      <div class="kpis3"><div class="mini"><div class="k">Volatilidad anual</div><div class="v" style="font-size:18px">${bookAnual.length?pct(vol):'—'}</div></div>
+        <div class="mini"><div class="k">Caída máxima</div><div class="v" style="font-size:18px">${bookAnual.length?pct(dd):'—'}</div></div>
+        <div class="mini"><div class="k">Mejor año</div><div class="v" style="font-size:18px">${bookAnual.length?pct(Math.max(...rentsBook)):'—'}</div></div>
+        <div class="mini"><div class="k">Peor año</div><div class="v" style="font-size:18px">${bookAnual.length?pct(Math.min(...rentsBook)):'—'}</div></div></div>
+      <div style="margin-top:10px">${bookAnual.length?barSVG(bookAnual.map(y=>y.a),rentsBook):'<span class="muted">Sin serie anual.</span>'}</div>
+      <div class="muted" style="margin-top:6px;font-size:11.5px">Volatilidad = desviación típica de las rentabilidades anuales. Caída máxima = mayor retroceso acumulado. La resolución mensual y el Sharpe llegan con los VL mensuales por fondo.</div></div>
     <div class="card"><h2>Concentración</h2>
-      <p class="muted" style="margin:0 0 8px">Mayores clientes por patrimonio (riesgo de dependencia). El producto más pesado es ${prod[0]?`<b>${prod[0].nombre}</b> con ${pct(prod[0].pct)} del total`:'—'}.</p>
+      <p class="muted" style="margin:0 0 8px">Mayores clientes por patrimonio (las conjuntas se reparten entre sus titulares). El producto más pesado es ${prod[0]?`<b>${prod[0].nombre}</b> con ${pct(prod[0].pct)} del total`:'—'}.</p>
       <table><thead><tr><th>Cliente</th><th class="num">Patrimonio</th><th class="num">% del total</th></tr></thead>
-        <tbody>${topCli.map(([pid,v])=>`<tr><td>${nom(st.personas[pid])}</td><td class="num">${eur(v)}</td><td class="num">${pct(v/(patTotal||1))}</td></tr>`).join('')}</tbody></table>
+        <tbody>${topCli.map(([pid,v])=>`<tr><td>${nom(st.personas[pid])}</td><td class="num">${eur(v)}</td><td class="num">${pct(v/patTotal)}</td></tr>`).join('')}</tbody></table>
       <div class="avisos">Los ratios de riesgo histórico (volatilidad, caída máxima, rentabilidad en el tiempo, Sharpe) necesitan la serie mensual de cada cartera, que aún no está migrada. Es el siguiente paso.</div></div>`;
 }
 
@@ -244,14 +274,14 @@ function genInforme(){
   const prod=productos(st,cids);
   // agregar histórico anual por año
   const anualMap={};
-  cids.forEach(c=>(st.hist[c]?.anual||[]).forEach(y=>{const o=anualMap[y.a]||(anualMap[y.a]={a:y.a,ini:0,fin:0,ap:0,re:0,res:0});o.ini+=y.ini||0;o.fin+=y.fin||0;o.ap+=y.ap||0;o.re+=y.re||0;o.res+=(y.res!=null?y.res:0);}));
-  const A=Object.values(anualMap).sort((x,y)=>x.a-y.a).map(y=>({...y,rent:y.ini?y.res/y.ini:null}));
+  cids.forEach(c=>(st.hist[c]?.anual||[]).forEach(y=>{const o=anualMap[y.a]||(anualMap[y.a]={a:y.a,ini:0,fin:0,ap:0,re:0,res:0,rents:[]});o.ini+=y.ini||0;o.fin+=y.fin||0;o.ap+=y.ap||0;o.re+=y.re||0;o.res+=(y.res!=null?y.res:0);if(y.rent!=null)o.rents.push(y.rent);}));
+  const A=Object.values(anualMap).sort((x,y)=>x.a-y.a).map(y=>({...y,rent:y.rents.length===1?y.rents[0]:(y.ini?y.res/y.ini:null)}));
   // mensual: la cartera con más meses
   let M=[]; cids.forEach(c=>{const m=st.hist[c]?.mensual||[]; if(m.length>M.length) M=m;});
   const ops=cids.flatMap(c=>st.hist[c]?.operaciones||[]);
   const last=A[A.length-1]||{};
   const desdeIni=A.reduce((a,y)=>a*(1+(y.rent||0)),1)-1;
-  const apPer=last.ap||0, rePer=last.re||0, apTot=A.reduce((a,y)=>a+(y.ap||0),0), reTot=A.reduce((a,y)=>a+(y.re||0),0);
+  const apPer=Math.abs(last.ap||0), rePer=Math.abs(last.re||0), apTot=A.reduce((a,y)=>a+Math.abs(y.ap||0),0), reTot=A.reduce((a,y)=>a+Math.abs(y.re||0),0);
   const ultMes=M.length?M[M.length-1]:null;
   // charts
   const donut=(segs)=>{const tot=segs.reduce((s,x)=>s+x.v,0)||1,r=60,C=2*Math.PI*r;let off=0,g='';const col=['#8E7577','#E5D0D2','#575755','#B79A9C','#C9B9BA','#7d6a6b','#ddc8c9','#9c8788'];
@@ -262,20 +292,21 @@ function genInforme(){
   const barras=(labels,vals)=>{if(!vals.length)return '';const W=560,H=170,pL=34,pR=10,pT=16,pB=22;const lo=Math.min(0,...vals),hi=Math.max(0,...vals),pad=(hi-lo)*0.15||0.02;const y0=lo-pad,y1=hi+pad,step=(W-pL-pR)/vals.length,bw=step*0.6,Y=v=>pT+(H-pT-pB)*(1-(v-y0)/((y1-y0)||1));let g=`<line x1="${pL}" y1="${Y(0)}" x2="${W-pR}" y2="${Y(0)}" stroke="#D9CFCF"/>`;vals.forEach((v,i)=>{const x=pL+i*step+step/2-bw/2,yt=Y(Math.max(0,v)),yb=Y(Math.min(0,v));g+=`<rect x="${x}" y="${yt}" width="${bw}" height="${Math.max(1,yb-yt)}" rx="2" fill="${v<0?'#575755':'#A98A8C'}"/><text x="${x+bw/2}" y="${v<0?yb+10:yt-3}" text-anchor="middle" font-size="8" font-weight="700">${p1(v)}</text><text x="${x+bw/2}" y="${H-8}" text-anchor="middle" font-size="8" fill="#575755">${labels[i]}</text>`;});return `<div class="chart"><svg viewBox="0 0 ${W} ${H}">${g}</svg></div>`;};
   const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const kpi=(k,v)=>`<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div></div>`;
-  const AVISO='Este documento, así como los datos, opiniones y estimaciones contenidos en el mismo, han sido elaborados por GESIURIS ASSET MANAGEMENT, S.G.I.I.C., S.A. ("GESIURIS") con la finalidad de proporcionar a sus clientes información general a la fecha de emisión. Debido a su contenido meramente informativo, no puede tomarse en consideración para la toma de decisiones. Rentabilidades pasadas no garantizan rentabilidades futuras.';
+  const AVISO='Documento informativo de carácter confidencial, para uso exclusivo del cliente. La información se ha elaborado a partir de fuentes consideradas fiables a la fecha de emisión y no constituye asesoramiento ni recomendación de inversión. Los datos se refieren al cierre indicado y pueden variar. Rentabilidades pasadas no garantizan rentabilidades futuras.';
   const HT=(sub)=>`<div class="htop"><div class="t">${nom(cli).toUpperCase()}<small>INFORME DE CARTERA</small></div><div class="r">${sub}</div></div>`;
-  const FT=n=>`<div class="foot2"><span>Informe confidencial · uso exclusivo del cliente</span><span class="gg">GESIURIS</span><span>31/08/2026 · ${n}/3</span></div>`;
+  const FT=n=>`<div class="foot2"><span>Informe confidencial · uso exclusivo del cliente</span><span>31/08/2026 · ${n}/3</span></div>`;
   // P1
   const compRows=prod.map(p=>`<tr><td>${p.nombre}</td><td class="num">${e0(p.valor)}</td><td class="num">${p1(p.pct)}</td></tr>`).join('');
   const p1html=`<div class="page">${HT('Cierre 31/08/2026')}
-    <div class="kpirow" style="margin-top:14px">${kpi('Patrimonio',e0(patTotal))}${kpi('Resultado 2026',last.res!=null?e0(last.res):'—')}${kpi('Rentabilidad 2026',last.rent!=null?p1(last.rent):'—')}${kpi('Último mes',ultMes!=null?p1(ultMes):'—')}${kpi('Desde inicio',A.length?p1(desdeIni):'—')}</div>
+    <div class="kpirow" style="margin-top:14px">${kpi('Patrimonio',e0(patTotal))}${kpi('Resultado 2026',last.res!=null?e0(last.res):'—')}${kpi('Rentabilidad 2026',last.rent!=null?p1(last.rent):'—')}${kpi('Último mes',ultMes!=null?p1(ultMes):'—')}</div>
     <div class="cols2"><div><h2 class="sec2">Composición actual</h2><table><thead><tr><th>Instrumento</th><th class="num">Valor €</th><th class="num">Peso</th></tr></thead><tbody>${compRows}</tbody></table></div>
       <div><h2 class="sec2">Distribución por pesos</h2>${donut(prod.map(p=>({n:p.nombre,v:p.valor})))}</div></div>
     <h2 class="sec2">Evolución del año</h2>${linea(M)}${FT(1)}</div>`;
   // P2
-  const arows=A.map(y=>`<tr><td>${y.a}</td><td class="num">${e0(y.ini)}</td><td class="num">${e0(y.fin)}</td><td class="num">${y.ap?e0(y.ap):'—'}</td><td class="num">${y.re?e0(y.re):'—'}</td><td class="num">${y.res!=null?e0(y.res):'—'}</td><td class="num">${y.rent!=null?p1(y.rent):'—'}</td><td>${y.a>=2026?'En curso':'Cerrado'}</td></tr>`).join('');
+  const arows=A.map(y=>`<tr><td>${y.a}</td><td class="num">${e0(y.ini)}</td><td class="num">${e0(y.fin)}</td><td class="num">${y.ap?e0(Math.abs(y.ap)):'—'}</td><td class="num">${y.re?e0(-Math.abs(y.re)):'—'}</td><td class="num">${y.res!=null?e0(y.res):'—'}</td><td class="num">${y.rent!=null?p1(y.rent):'—'}</td><td>${y.a>=2026?'En curso':'Cerrado'}</td></tr>`).join('');
   const p2html=`<div class="page">${HT('2026 y perspectiva histórica')}
     <h2 class="sec2">Detalle anual</h2><table class="anual"><thead><tr><th>Año</th><th class="num">Inicio €</th><th class="num">Fin €</th><th class="num">Aport. €</th><th class="num">Retir. €</th><th class="num">Resultado €</th><th class="num">Rent.</th><th>Estado</th></tr></thead><tbody>${arows||'<tr><td colspan="8" class="muted">Sin histórico anual para esta cartera.</td></tr>'}</tbody></table>
+    ${A.length?`<p class="muted" style="margin:6px 0 0">Volatilidad anual: <b>${p1(stdev(A.map(y=>y.rent||0)))}</b> · Caída máxima: <b>${p1(maxDD(A.map(y=>y.rent||0)))}</b></p>`:''}
     <div class="cols2" style="margin-top:12px"><div><h2 class="sec2">Rentabilidad mensual 2026</h2>${barras(MES,M)}</div><div><h2 class="sec2">Rentabilidad anual</h2>${barras(A.map(y=>y.a),A.map(y=>y.rent||0))}</div></div>${FT(2)}</div>`;
   // P3
   const orows=ops.map(o=>`<tr><td>${o.fecha}</td><td>${o.op}</td><td>${o.inst}</td><td class="num">${o.imp!=null?new Intl.NumberFormat('es-ES',{maximumFractionDigits:0}).format(o.imp):''}</td><td class="num">${o.precio!=null?t4(o.precio):''}</td><td class="num">${o.tit!=null?t4(o.tit):''}</td></tr>`).join('');
