@@ -88,3 +88,11 @@ table.anual thead th{background:var(--salmon-osc);color:#fff}
 .mini,.kpi{text-align:center}
 #doc{display:flex;flex-direction:column;align-items:center}
 .kpis3{justify-content:center}
+/* Oxigenar tablas y encajar desplegables */
+.card table td,.card table th{padding:11px 13px;line-height:1.45}
+.card table td.num,.card table th.num{white-space:nowrap}
+.card table thead th{border-bottom:1px solid var(--linea)}
+.card table tbody tr:hover{background:var(--blanco-roto)}
+.card h2{margin-bottom:16px}
+.field select{width:100%}
+select{max-width:100%}

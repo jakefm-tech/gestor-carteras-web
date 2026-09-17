@@ -1,5 +1,5 @@
 const $ = (id) => document.getElementById(id);
-const eur = (n) => new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0)+' €';
+const eur = (n) => new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:'always'}).format(n||0)+' €';
 const pct = (n) => new Intl.NumberFormat('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1}).format((n||0)*100)+' %';
 const nom = (p) => p ? `${p.nombre||''} ${p.apellidos||''}`.trim()||'(sin nombre)' : '—';
 const esc = (s) => String(s==null?'':s).replace(/"/g,'&quot;');
@@ -265,7 +265,7 @@ function genInforme(){
   const st=ESTADO, cli=st.personas[SELCLI]; if(!cli){ $('doc').innerHTML=''; return; }
   const cids=[...document.querySelectorAll('.icart:checked')].map(i=>i.value);
   if(!cids.length){ $('doc').innerHTML='<div class="page"><div class="muted">Marca al menos una cartera.</div></div>'; return; }
-  const e0=n=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:0}).format(Math.round(n||0))+' €';
+  const e0=n=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:0,useGrouping:'always'}).format(Math.round(n||0))+' €';
   const p2=n=>(n>=0?'+':'')+new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}).format((n||0)*100)+' %';
   const p1=n=>new Intl.NumberFormat('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1}).format((n||0)*100)+' %';
   const t4=n=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:4}).format(n||0);
@@ -281,7 +281,7 @@ function genInforme(){
   const ops=cids.flatMap(c=>st.hist[c]?.operaciones||[]);
   const last=A[A.length-1]||{};
   const desdeIni=A.reduce((a,y)=>a*(1+(y.rent||0)),1)-1;
-  const apPer=Math.abs(last.ap||0), rePer=Math.abs(last.re||0), apTot=A.reduce((a,y)=>a+Math.abs(y.ap||0),0), reTot=A.reduce((a,y)=>a+Math.abs(y.re||0),0);
+  const apInicial=A.length?Math.abs(A[0].ini||0):0; const apPer=Math.abs(last.ap||0), rePer=Math.abs(last.re||0), apTot=apInicial+A.reduce((a,y)=>a+Math.abs(y.ap||0),0), reTot=A.reduce((a,y)=>a+Math.abs(y.re||0),0);
   const ultMes=M.length?M[M.length-1]:null;
   // charts
   const donut=(segs)=>{const tot=segs.reduce((s,x)=>s+x.v,0)||1,r=60,C=2*Math.PI*r;let off=0,g='';const col=['#8E7577','#E5D0D2','#575755','#B79A9C','#C9B9BA','#7d6a6b','#ddc8c9','#9c8788'];
@@ -311,10 +311,10 @@ function genInforme(){
   // P3
   const orows=ops.map(o=>`<tr><td>${o.fecha}</td><td>${o.op}</td><td>${o.inst}</td><td class="num">${o.imp!=null?new Intl.NumberFormat('es-ES',{maximumFractionDigits:0}).format(o.imp):''}</td><td class="num">${o.precio!=null?t4(o.precio):''}</td><td class="num">${o.tit!=null?t4(o.tit):''}</td></tr>`).join('');
   const p3html=`<div class="page">${HT('Operaciones y movimientos')}
-    <h2 class="sec2">Operaciones recientes</h2><table><thead><tr><th>Fecha</th><th>Operación</th><th>Instrumento</th><th class="num">Importe €</th><th class="num">Precio</th><th class="num">Títulos</th></tr></thead><tbody>${orows||'<tr><td colspan="6" class="muted">Sin operaciones.</td></tr>'}</tbody></table>
+    <h2 class="sec2">Operaciones desde inicio</h2><table><thead><tr><th>Fecha</th><th>Operación</th><th>Instrumento</th><th class="num">Importe €</th><th class="num">Precio</th><th class="num">Títulos</th></tr></thead><tbody>${orows||'<tr><td colspan="6" class="muted">Sin operaciones.</td></tr>'}</tbody></table>
     <h2 class="sec2" style="margin-top:14px">Aportaciones y disposiciones</h2>
     <div class="cols2"><div class="card2"><div class="r2"><span>Aportaciones 2026</span><b>${e0(apPer)}</b></div><div class="r2"><span>Disposiciones 2026</span><b>${e0(rePer)}</b></div></div>
-      <div class="card2"><div class="r2"><span>Aportaciones desde inicio</span><b>${e0(apTot)}</b></div><div class="r2"><span>Disposiciones desde inicio</span><b>${e0(reTot)}</b></div></div></div>
+      <div class="card2"><div class="r2"><span>Aportación inicial (inicio de la relación)</span><b>${e0(apInicial)}</b></div><div class="r2"><span>Aportaciones totales desde inicio</span><b>${e0(apTot)}</b></div><div class="r2"><span>Disposiciones desde inicio</span><b>${e0(reTot)}</b></div></div></div>
     <h2 class="sec2" style="margin-top:14px">Aviso legal</h2><div class="aviso2">${AVISO}</div>${FT(3)}</div>`;
   $('doc').innerHTML=p1html+p2html+p3html;
 }
