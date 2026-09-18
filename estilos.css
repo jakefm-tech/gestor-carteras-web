@@ -129,3 +129,24 @@ select{max-width:100%}
 #doc .panel table{margin:0}
 #doc .isin{font-size:9.5px;color:var(--gris);white-space:nowrap}
 #doc .riesgo{margin:8px 2px 0;font-size:11px;color:#4b4642}
+/* ---- Informe: llenar página y centrado ---- */
+.wrap{margin:0 auto}
+#doc{display:flex;flex-direction:column;align-items:center}
+#doc .page{width:100%;max-width:1060px;margin:0 auto 20px;display:flex;flex-direction:column}
+#doc .body{flex:1;display:flex;flex-direction:column;gap:14px}
+#doc .cols2.grow{flex:1;min-height:0}
+#doc .cols2.grow>div{display:flex;flex-direction:column}
+#doc .cols2.grow .panel{flex:1;display:flex;align-items:center;justify-content:center}
+#doc .grow{flex:1;min-height:0;display:flex;flex-direction:column}
+#doc .grow .panel{flex:1}
+#doc .chart{width:100%;height:100%;display:flex;align-items:center}
+#doc .chart svg{width:100%;height:100%}
+#doc .page{min-height:730px}
+#doc .num.pos{color:var(--ok)} #doc .num.neg{color:#B0453B}
+@media print{
+  @page{size:A4 landscape;margin:9mm}
+  .top,.tabs,.no-print{display:none!important}
+  .wrap{padding:0;max-width:none}
+  #doc .page{max-width:none;min-height:0;height:190mm;overflow:hidden;box-shadow:none;border:none;padding:0;margin:0;page-break-after:always}
+  #doc .page:last-child{page-break-after:auto}
+}
