@@ -163,3 +163,9 @@ select{max-width:100%}
 #doc .donut svg{width:170px}
 /* Forzar dos columnas en TODOS los pares de gráficos del informe (pág 1 y 2) */
 #doc .cols2, #doc .cols2.grow{display:grid !important;grid-template-columns:1fr 1fr !important;gap:16px}
+/* --- Fix página en blanco: cada hoja se ajusta a su contenido al imprimir --- */
+#doc .chart svg{height:auto !important}
+@media print{
+  #doc .page{height:auto !important;min-height:0 !important;overflow:visible !important;page-break-after:always}
+  #doc .page:last-child{page-break-after:auto}
+}
