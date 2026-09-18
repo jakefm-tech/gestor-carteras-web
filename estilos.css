@@ -150,3 +150,16 @@ select{max-width:100%}
   #doc .page{max-width:none;min-height:0;height:190mm;overflow:hidden;box-shadow:none;border:none;padding:0;margin:0;page-break-after:always}
   #doc .page:last-child{page-break-after:auto}
 }
+/* --- Corrección informe: gráficos lado a lado + llenar + indicadores centrados --- */
+#doc .cols2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+#doc .grow{display:block;flex:1;min-height:0}          /* anula el flex-column previo que rompía el grid */
+#doc .cols2.grow{display:grid;flex:1;min-height:0}
+#doc .cols2.grow>div{display:flex;flex-direction:column;min-height:0}
+#doc .cols2.grow .panel{flex:1;display:flex;align-items:center;justify-content:center}
+#doc .grow.col{display:flex;flex-direction:column;flex:1;min-height:0}
+#doc .grow.col .panel{flex:1}
+#doc .kpi{justify-content:center}
+#doc .donut{justify-content:center}
+#doc .donut svg{width:170px}
+/* Forzar dos columnas en TODOS los pares de gráficos del informe (pág 1 y 2) */
+#doc .cols2, #doc .cols2.grow{display:grid !important;grid-template-columns:1fr 1fr !important;gap:16px}
