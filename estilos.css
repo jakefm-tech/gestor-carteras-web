@@ -169,3 +169,28 @@ select{max-width:100%}
   #doc .page{height:auto !important;min-height:0 !important;overflow:visible !important;page-break-after:always}
   #doc .page:last-child{page-break-after:auto}
 }
+/* --- Impresión: compactar y mantener cada sección entera en su hoja --- */
+@media print{
+  @page{size:A4 landscape;margin:8mm}
+  .top,.tabs,.no-print{display:none!important}
+  .wrap{padding:0;max-width:none}
+  #doc .page{height:auto!important;min-height:0!important;overflow:visible!important;page-break-after:always;font-size:10px}
+  #doc .page:last-child{page-break-after:auto}
+  #doc .body{gap:8px}
+  #doc .secbar{break-after:avoid!important;page-break-after:avoid!important;margin-top:8px;padding:6px 12px;font-size:10px}
+  #doc .panel{break-inside:avoid!important;page-break-inside:avoid!important;padding:8px 12px}
+  #doc table{font-size:8.6px}
+  #doc table thead th{padding:4px 7px;font-size:7.6px}
+  #doc table tbody td{padding:3px 7px}
+  #doc .kpirow{margin:8px 0}
+  #doc .kpi{padding:8px 12px}
+  #doc .kpi .v{font-size:15px}
+  #doc .kic{width:26px;height:26px;font-size:13px}
+  #doc .htop{margin-bottom:8px;padding-bottom:6px}
+  #doc .htop .t{font-size:18px}
+  #doc .chart svg{max-height:46mm}
+  #doc .riesgo{margin-top:6px;font-size:10px}
+  #doc .card2 .r2{padding:4px 0;font-size:10px}
+  #doc .aviso2{font-size:9px;padding:8px 10px}
+  #doc .foot2{font-size:8.5px}
+}
