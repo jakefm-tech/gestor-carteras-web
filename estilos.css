@@ -60,170 +60,66 @@ select{padding:7px 9px;border:1px solid var(--amarillo-b);border-radius:7px;font
 .kpi{flex:1;min-width:130px;background:var(--beige);border-radius:8px;padding:10px 14px}.kpi .k{font-size:11px;color:var(--gris)}.kpi .v{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}
 .sec2{font-size:13px;color:var(--salmon-osc);border-bottom:1px solid var(--linea);padding-bottom:5px;margin:18px 0 8px}
 .car{font-size:12.5px;margin:14px 0 6px}
-.doc,.page{background:#fff}.page{border:1px solid var(--linea);border-radius:8px;padding:20px}
-.foot2{margin-top:20px;border-top:1px solid var(--linea);padding-top:6px;color:var(--gris);font-size:10px}
-@media print{.top,.tabs,.no-print{display:none!important}.wrap{padding:0}.page{border:none}}
-.cols2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
-.donut{display:flex;gap:10px;align-items:center}.donut .leg{font-size:11px;display:flex;flex-direction:column;gap:5px}
+/* ===================== INFORME ===================== */
+.doc,.page{background:#fff}
+.cols2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch}
+.donut{display:flex;gap:14px;align-items:center;justify-content:center}
+.donut .leg{font-size:11px;display:flex;flex-direction:column;gap:5px}
 .donut .it{display:flex;gap:6px;align-items:center}.donut .sw{width:10px;height:10px;border-radius:3px}
-.chart svg{width:100%;height:auto}
-table.anual thead th{background:var(--salmon-osc);color:#fff}
-.card2{background:var(--beige);border-radius:8px;padding:10px 12px}.card2 .r2{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--linea);font-size:12px}.card2 .r2:last-child{border:none}
+.chart{width:100%}.chart svg{width:100%;height:auto;display:block}
+.card2{background:var(--beige);border:1px solid var(--linea);border-radius:8px;padding:10px 12px}
+.card2 .r2{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--linea);font-size:12px}.card2 .r2:last-child{border:none}
 .aviso2{font-size:10.5px;color:var(--gris);line-height:1.5;text-align:justify}
-.foot2{margin-top:16px;border-top:1px solid var(--linea);padding-top:6px;display:flex;justify-content:space-between;color:var(--gris);font-size:10px}.foot2 .gg{font-weight:800;letter-spacing:2px;color:var(--salmon-osc)}
-@media print{.page{page-break-after:always}}
-/* Informe apaisado y saltos de página limpios */
-@page{size:A4 landscape;margin:8mm}
-#doc .page{width:100%;max-width:1040px;margin:0 auto 18px;padding:16px 20px}
-#doc .page table,#doc .cols2,#doc .chart,#doc .card2{page-break-inside:avoid;break-inside:avoid}
-#doc .sec2{page-break-after:avoid}
-@media print{
-  .top,.tabs,.no-print{display:none!important}
-  .wrap{padding:0;max-width:none}
-  #doc .page{max-width:none;width:auto;box-shadow:none;border:none;margin:0;padding:0;page-break-after:always}
-  #doc .page:last-child{page-break-after:auto}
-}
-/* Centrado de cuadros y layout */
-.wrap{max-width:1080px}
-.mini,.kpi{text-align:center}
+
 #doc{display:flex;flex-direction:column;align-items:center}
-.kpis3{justify-content:center}
-/* Oxigenar tablas y encajar desplegables */
-.card table td,.card table th{padding:11px 13px;line-height:1.45}
-.card table td.num,.card table th.num{white-space:nowrap}
-.card table thead th{border-bottom:1px solid var(--linea)}
-.card table tbody tr:hover{background:var(--blanco-roto)}
-.card h2{margin-bottom:16px}
-.field select{width:100%}
-select{max-width:100%}
-/* ---- Empaque del informe ---- */
-#doc .sec2{background:var(--salmon-osc);color:#fff;border:none;border-radius:6px;padding:8px 14px;margin:18px 0 12px;
-  font-size:11.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;display:flex;align-items:center;gap:9px}
-#doc .sec2::before{content:'';width:4px;height:15px;background:var(--salmon-cla);border-radius:2px}
-#doc .kpi{background:#fff;border:1px solid var(--linea);border-top:3px solid var(--salmon-osc);border-radius:9px;padding:14px 16px;text-align:center}
-#doc .kpi .k{font-size:9px;letter-spacing:.5px;text-transform:uppercase;color:var(--gris)}
-#doc .kpi .v{font-size:22px;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums}
+#doc .page{width:100%;max-width:1060px;margin:0 auto 20px;padding:18px 22px;border:1px solid var(--linea);border-radius:8px;background:#fff}
+
+#doc .htop{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid var(--salmon-osc);padding-bottom:10px;margin-bottom:16px}
+#doc .htop .t{font-size:21px;font-weight:800;color:var(--salmon-osc);letter-spacing:.4px}
+#doc .htop .t small{display:block;font-size:9px;letter-spacing:3px;color:var(--gris)}
+#doc .htop .r{font-size:12px;color:var(--gris);font-style:italic}
+#doc .foot2{margin-top:16px;border-top:1px solid var(--linea);padding-top:6px;display:flex;justify-content:space-between;color:var(--gris);font-size:10px}
+
+#doc .kpirow{display:flex;gap:12px;margin:14px 0}
+#doc .kpi{flex:1;display:flex;gap:11px;align-items:center;justify-content:center;background:var(--beige);border:1px solid var(--linea);border-radius:9px;padding:12px 14px}
+#doc .kic{width:32px;height:32px;flex:none;border-radius:8px;background:var(--salmon-cla);color:var(--salmon-osc);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800}
+#doc .kpi .k{font-size:8.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--gris)}
+#doc .kpi .v{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;margin-top:2px}
+
+#doc .secbar{background:var(--salmon-osc);color:#fff;border-radius:6px 6px 0 0;padding:8px 14px;margin-top:16px;font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;gap:10px}
+#doc .secbar .st{display:flex;align-items:center;gap:9px}
+#doc .secbar .st::before{content:'';width:4px;height:14px;background:var(--salmon-cla);border-radius:2px}
+#doc .secbar .cap{font-weight:400;font-size:9.5px;font-style:italic;text-transform:none;opacity:.9;letter-spacing:0}
+#doc .panel{border:1px solid var(--linea);border-top:none;border-radius:0 0 8px 8px;padding:12px 14px}
+#doc .panel table{margin:0}
+#doc .panel.pc{display:flex;justify-content:center;align-items:center}
+
 #doc table{font-size:12px}
 #doc table thead th{background:var(--blanco-roto);text-transform:uppercase;font-size:9.5px;letter-spacing:.4px;color:var(--gris);border-bottom:1px solid var(--linea);padding:8px 10px}
 #doc table tbody td{padding:8px 10px;border-bottom:1px solid #F0EAEA}
 #doc table.anual thead th{background:var(--salmon-osc);color:#fff}
 #doc table.anual tbody tr:nth-child(even){background:var(--blanco-roto)}
-#doc .htop{border-bottom:2px solid var(--salmon-osc);padding-bottom:10px;margin-bottom:16px}
-#doc .htop .t{font-size:21px;font-weight:800;letter-spacing:.4px}
-#doc .card2{border:1px solid var(--linea)}
-#doc .aviso2{background:var(--beige);border:1px solid var(--linea);border-radius:8px;padding:12px 14px}
-#doc .foot2 .gg{color:var(--salmon-osc)}
-/* ---- Informe: cajas de sección y KPI con icono ---- */
-#doc .kpirow{display:flex;gap:10px;margin:14px 0}
-#doc .kpi{flex:1;display:flex;gap:11px;align-items:center;background:var(--beige);border:1px solid var(--linea);border-top:none;border-radius:9px;padding:12px 14px;text-align:left}
-#doc .kic{width:32px;height:32px;flex:none;border-radius:8px;background:var(--salmon-cla);color:var(--salmon-osc);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800}
-#doc .kpi .k{font-size:8.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--gris)}
-#doc .kpi .v{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;margin-top:2px}
-#doc .secbar{background:var(--salmon-osc);color:#fff;border-radius:6px 6px 0 0;padding:8px 14px;margin-top:16px;
-  font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;display:flex;justify-content:space-between;align-items:center;gap:10px}
-#doc .secbar .st{display:flex;align-items:center;gap:9px}
-#doc .secbar .st::before{content:'';width:4px;height:14px;background:var(--salmon-cla);border-radius:2px}
-#doc .secbar .cap{font-weight:400;font-size:9.5px;font-style:italic;text-transform:none;opacity:.9;letter-spacing:0}
-#doc .panel{border:1px solid var(--linea);border-top:none;border-radius:0 0 8px 8px;padding:12px 14px}
-#doc .panel.pc{display:flex;justify-content:center;align-items:center;min-height:150px}
-#doc .panel table{margin:0}
+#doc .tot td{font-weight:700;background:var(--salmon-pal);border-top:1px solid var(--linea)}
+#doc .num.pos{color:var(--ok)}#doc .num.neg{color:#B0453B}
 #doc .isin{font-size:9.5px;color:var(--gris);white-space:nowrap}
 #doc .riesgo{margin:8px 2px 0;font-size:11px;color:#4b4642}
-/* ---- Informe: llenar página y centrado ---- */
-.wrap{margin:0 auto}
-#doc{display:flex;flex-direction:column;align-items:center}
-#doc .page{width:100%;max-width:1060px;margin:0 auto 20px;display:flex;flex-direction:column}
-#doc .body{flex:1;display:flex;flex-direction:column;gap:14px}
-#doc .cols2.grow{flex:1;min-height:0}
-#doc .cols2.grow>div{display:flex;flex-direction:column}
-#doc .cols2.grow .panel{flex:1;display:flex;align-items:center;justify-content:center}
-#doc .grow{flex:1;min-height:0;display:flex;flex-direction:column}
-#doc .grow .panel{flex:1}
-#doc .chart{width:100%;height:100%;display:flex;align-items:center}
-#doc .chart svg{width:100%;height:100%}
-#doc .page{min-height:730px}
-#doc .num.pos{color:var(--ok)} #doc .num.neg{color:#B0453B}
+
+/* ===================== IMPRESIÓN ===================== */
+@page{size:A4 landscape;margin:9mm}
 @media print{
-  @page{size:A4 landscape;margin:9mm}
   .top,.tabs,.no-print{display:none!important}
   .wrap{padding:0;max-width:none}
-  #doc .page{max-width:none;min-height:0;height:190mm;overflow:hidden;box-shadow:none;border:none;padding:0;margin:0;page-break-after:always}
-  #doc .page:last-child{page-break-after:auto}
-}
-/* --- Corrección informe: gráficos lado a lado + llenar + indicadores centrados --- */
-#doc .cols2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-#doc .grow{display:block;flex:1;min-height:0}          /* anula el flex-column previo que rompía el grid */
-#doc .cols2.grow{display:grid;flex:1;min-height:0}
-#doc .cols2.grow>div{display:flex;flex-direction:column;min-height:0}
-#doc .cols2.grow .panel{flex:1;display:flex;align-items:center;justify-content:center}
-#doc .grow.col{display:flex;flex-direction:column;flex:1;min-height:0}
-#doc .grow.col .panel{flex:1}
-#doc .kpi{justify-content:center}
-#doc .donut{justify-content:center}
-#doc .donut svg{width:170px}
-/* Forzar dos columnas en TODOS los pares de gráficos del informe (pág 1 y 2) */
-#doc .cols2, #doc .cols2.grow{display:grid !important;grid-template-columns:1fr 1fr !important;gap:16px}
-/* --- Fix página en blanco: cada hoja se ajusta a su contenido al imprimir --- */
-#doc .chart svg{height:auto !important}
-@media print{
-  #doc .page{height:auto !important;min-height:0 !important;overflow:visible !important;page-break-after:always}
-  #doc .page:last-child{page-break-after:auto}
-}
-/* --- Impresión: compactar y mantener cada sección entera en su hoja --- */
-@media print{
-  @page{size:A4 landscape;margin:8mm}
-  .top,.tabs,.no-print{display:none!important}
-  .wrap{padding:0;max-width:none}
-  #doc .page{height:auto!important;min-height:0!important;overflow:visible!important;page-break-after:always;font-size:10px}
-  #doc .page:last-child{page-break-after:auto}
-  #doc .body{gap:8px}
-  #doc .secbar{break-after:avoid!important;page-break-after:avoid!important;margin-top:8px;padding:6px 12px;font-size:10px}
-  #doc .panel{break-inside:avoid!important;page-break-inside:avoid!important;padding:8px 12px}
-  #doc table{font-size:8.6px}
-  #doc table thead th{padding:4px 7px;font-size:7.6px}
-  #doc table tbody td{padding:3px 7px}
-  #doc .kpirow{margin:8px 0}
-  #doc .kpi{padding:8px 12px}
-  #doc .kpi .v{font-size:15px}
-  #doc .kic{width:26px;height:26px;font-size:13px}
-  #doc .htop{margin-bottom:8px;padding-bottom:6px}
-  #doc .htop .t{font-size:18px}
-  #doc .chart svg{max-height:46mm}
-  #doc .riesgo{margin-top:6px;font-size:10px}
-  #doc .card2 .r2{padding:4px 0;font-size:10px}
-  #doc .aviso2{font-size:9px;padding:8px 10px}
-  #doc .foot2{font-size:8.5px}
-}
-/* --- Impresión (definitivo): letra cómoda + llenar cada hoja, sin partir secciones --- */
-@media print{
-  @page{size:A4 landscape;margin:9mm}
-  .top,.tabs,.no-print{display:none!important}
-  .wrap{padding:0!important;max-width:none!important}
-  #doc{align-items:stretch!important}
-  #doc .page{height:184mm!important;min-height:0!important;max-width:none!important;overflow:hidden!important;
-    display:flex!important;flex-direction:column!important;page-break-after:always;box-shadow:none!important;
-    border:none!important;padding:0!important;margin:0!important;font-size:11px!important}
-  #doc .page:last-child{page-break-after:auto}
-  #doc .body{flex:1!important;display:flex!important;flex-direction:column!important;justify-content:space-between!important;gap:12px!important;min-height:0!important}
-  #doc .htop{margin-bottom:8px!important;padding-bottom:6px!important}
-  #doc .htop .t{font-size:20px!important}
-  #doc .kpirow{margin:0!important}
-  #doc .kpi{padding:12px 14px!important}
-  #doc .kpi .v{font-size:17px!important}
-  #doc .kic{width:30px!important;height:30px!important;font-size:15px!important}
-  #doc .secbar{font-size:10.5px!important;padding:8px 13px!important;margin:0!important}
-  #doc .panel{padding:10px 13px!important}
-  #doc table{font-size:10.5px!important}
-  #doc table thead th{font-size:9px!important;padding:6px 8px!important}
-  #doc table tbody td{padding:6px 8px!important}
-  /* gráficos de páginas 1 y 2: crecen y llenan a lo alto */
-  #doc .cols2.grow{flex:1!important;min-height:0!important}
-  #doc .cols2.grow>div{display:flex!important;flex-direction:column!important;min-height:0!important}
-  #doc .cols2.grow .panel{flex:1!important;min-height:0!important;display:flex!important;align-items:center;justify-content:center}
-  #doc .cols2.grow .chart,#doc .cols2.grow .chart svg{width:100%!important;height:100%!important;max-height:none!important}
-  #doc .grow.col{flex:none!important}
-  #doc .riesgo{font-size:10px!important;margin-top:8px!important}
-  #doc .card2 .r2{padding:6px 0!important;font-size:11px!important}
-  #doc .aviso2{font-size:10px!important;padding:10px 12px!important}
-  #doc .foot2{font-size:9px!important}
+  #doc{align-items:stretch}
+  #doc .page{max-width:none;width:auto;margin:0;padding:0;border:none;box-shadow:none;
+    height:auto;min-height:0;overflow:visible;
+    page-break-after:always;break-after:page;page-break-inside:auto}
+  #doc .page:last-child{page-break-after:auto;break-after:auto}
+  #doc .secbar{page-break-after:avoid;break-after:avoid}
+  #doc .panel,#doc table,#doc .cols2,#doc .card2,#doc .chart{page-break-inside:avoid;break-inside:avoid}
+  #doc{font-size:11px}
+  #doc table{font-size:9.5px}
+  #doc table thead th{font-size:8.5px;padding:6px 8px}
+  #doc table tbody td{padding:5px 8px}
+  #doc .aviso2{font-size:10px}
+  #doc .foot2{font-size:9px}
 }
