@@ -121,6 +121,41 @@ function renderAnalisis(){
       <div class="avisos">Los ratios de riesgo histórico (volatilidad, caída máxima, rentabilidad en el tiempo, Sharpe) necesitan la serie mensual de cada cartera, que aún no está migrada. Es el siguiente paso.</div></div>`;
 }
 
+
+// ---- carta de transferencia (Word) ----
+function apocope(w){ if(w==='uno')return 'un'; if(w.endsWith('veintiuno'))return w.slice(0,-9)+'veintiún'; if(w.endsWith(' uno'))return w.slice(0,-4)+' un'; return w; }
+function enLetras(n){ n=Math.round(n*100)/100; const ent=Math.floor(n), cent=Math.round((n-ent)*100);
+  const U=['','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez','once','doce','trece','catorce','quince','dieciséis','diecisiete','dieciocho','diecinueve','veinte','veintiuno','veintidós','veintitrés','veinticuatro','veinticinco','veintiséis','veintisiete','veintiocho','veintinueve'];
+  const D=['','','','treinta','cuarenta','cincuenta','sesenta','setenta','ochenta','noventa'];
+  const C=['','ciento','doscientos','trescientos','cuatrocientos','quinientos','seiscientos','setecientos','ochocientos','novecientos'];
+  const c3=x=>{ if(x===0)return ''; if(x===100)return 'cien'; let r=''; const c=Math.floor(x/100),d=Math.floor((x%100)/10),u=x%10,dd=x%100; r+=C[c]; if(dd){ if(r)r+=' '; if(dd<30)r+=U[dd]; else { r+=D[d]; if(u)r+=' y '+U[u]; } } return r; };
+  const mi=x=>{ if(x===0)return 'cero'; const M=Math.floor(x/1000000),ML=Math.floor((x%1000000)/1000),RE=x%1000; let r=''; if(M)r+=(M===1?'un millón':c3(M)+' millones'); if(ML){if(r)r+=' ';r+=(ML===1?'mil':c3(ML)+' mil');} if(RE){if(r)r+=' ';r+=c3(RE);} return r; };
+  let s=mi(ent); const millon=s.endsWith('millón')||s.endsWith('millones'); s=apocope(s);
+  let out=s+(ent===1?' euro':(millon?' de euros':' euros'));
+  if(cent>0){ out+=' con '+apocope(c3(cent))+(cent===1?' céntimo':' céntimos'); }
+  return out.charAt(0).toUpperCase()+out.slice(1); }
+function fechaLarga(iso){ const M=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']; const [y,m,d]=(iso||'').split('-').map(Number); return (d&&m&&y)?`${d} de ${M[m-1]} de ${y}`:''; }
+async function cargarDocx(){ if(window.docx) return window.docx; await new Promise((res,rej)=>{ const sc=document.createElement('script'); sc.src='https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js'; sc.onload=res; sc.onerror=rej; document.head.appendChild(sc); }); return window.docx; }
+async function generarCarta(){
+  const st=ESTADO, p=st.personas[SEL], msg=$('tmsg'); if(!p) return; msg.textContent='';
+  const dni=$('fdni').value.trim(), origen=$('fori').value.trim(), banco=$('fban').value.trim(), iban=$('fiban').value.trim();
+  const fecha=$('tfecha').value, importe=pnum($('timp').value);
+  if(!dni||!origen||!banco||!iban){ msg.textContent='Faltan DNI o cuentas (rellénalos arriba).'; return; }
+  if(!fecha){ msg.textContent='Falta la fecha.'; return; }
+  if(isNaN(importe)||importe<=0){ msg.textContent='Importe no válido.'; return; }
+  msg.textContent='Generando…';
+  try{
+    const D=await cargarDocx(), nombre=nom(p);
+    const eur=n=>new Intl.NumberFormat('es-ES',{minimumFractionDigits:(n%1?2:0),maximumFractionDigits:2}).format(n);
+    const B=(t,o={})=>new D.Paragraph({children:[new D.TextRun({text:t,...o})],spacing:{after:120}}), V=()=>new D.Paragraph({children:[new D.TextRun('')]});
+    const cuerpo=`Yo, ${nombre} con DNI ${dni} solicito que transfieran ${eur(importe)}€ (${enLetras(importe)}) de mi cuenta ${origen} a la cuenta en ${banco} a mi nombre ${iban}.`;
+    const doc=new D.Document({styles:{default:{document:{run:{font:'Calibri',size:22}}}},sections:[{properties:{page:{margin:{top:1400,bottom:1400,left:1400,right:1400}}},children:[
+      B(`Barcelona, ${fechaLarga(fecha)}`),V(),V(),B('RENTA 4',{bold:true}),V(),B('Buenos días,'),V(),B(cuerpo),V(),B('Muchas gracias.'),V(),B('Atentamente,'),V(),V(),V(),V(),B(`NOMBRE  ${nombre}`),B(`DNI       ${dni}`)]}]});
+    const blob=await D.Packer.toBlob(doc), a=document.createElement('a');
+    a.href=URL.createObjectURL(blob); a.download=`Transferencia_${nombre.replace(/\s+/g,'_')}_${fecha}.docx`; a.click(); URL.revokeObjectURL(a.href);
+    msg.textContent='✓ Word descargado';
+  }catch(e){ msg.textContent='No se pudo generar (¿sin conexión?).'; }
+}
 // ============ CLIENTES ============
 function renderClientes(){
   const st=ESTADO; if(SEL&&!st.personas[SEL]) SEL=null;
@@ -177,13 +212,21 @@ function renderFicha(){
     <div class="row" style="margin-top:8px"><input id="fe" value="${esc(p.email)}" placeholder="Email"><input id="ft" value="${esc(p.telefono)}" placeholder="Teléfono"></div>
     <div class="row" style="margin-top:8px"><label class="chk">Idioma <select id="fi">${Object.entries(IDIOMAS).map(([k,v])=>`<option value="${k}" ${(p.idioma||'es')===k?'selected':''}>${v}</option>`).join('')}</select></label>
       <button class="primary" id="bF">Guardar ficha</button><button class="danger" id="bDP" style="margin-left:auto">Eliminar cliente…</button><span class="muted" id="fm"></span></div>
+    <div style="margin-top:8px"><input id="fdni" value="${esc(p.dni||'')}" placeholder="DNI"></div>
+    <div class="row" style="margin-top:8px"><input id="fori" value="${esc(p.cuentaOrigen||'')}" placeholder="Cuenta origen (IBAN en el bróker)"></div>
+    <div class="row" style="margin-top:8px"><input id="fban" value="${esc(p.bancoDestino||'')}" placeholder="Banco destino"><input id="fiban" value="${esc(p.ibanDestino||'')}" placeholder="IBAN destino"></div>
     <div style="margin-top:16px"><h2>Carteras</h2>${cart}</div>
+    <div style="margin-top:16px;border-top:1px solid var(--linea);padding-top:12px">
+      <h2>Carta de transferencia (Renta 4)</h2>
+      <p class="muted" style="margin:-4px 0 10px">Usa los datos de arriba (DNI y cuentas). Los guardas en la ficha o los rellenas solo para esta carta.</p>
+      <div class="row"><label class="chk">Fecha <input id="tfecha" type="date" value="2026-08-31"></label><input id="timp" placeholder="Importe (€)" inputmode="decimal" style="max-width:160px"></div>
+      <div class="row" style="margin-top:10px"><button class="primary" id="bCarta">Generar Word</button><span class="muted" id="tmsg"></span></div></div>
     <div style="margin-top:12px;border-top:1px solid var(--linea);padding-top:12px">
       <div class="row"><input id="ncn" placeholder="Nombre nueva cartera" value="Cartera individual" style="flex:1"></div>
       <p class="muted" style="margin:8px 0 4px">Otros titulares (marca para conjunta):</p>
       <div class="chks">${otras.map(x=>`<label class="chk"><input type="checkbox" class="co" value="${x.id}"> ${nom(x)}</label>`).join('')||'<span class="muted">no hay más personas</span>'}</div>
       <div class="row" style="margin-top:8px"><button class="primary" id="bNC">Crear cartera para ${p.nombre}</button></div></div>`;
-  $('bF').onclick=guardarFicha; $('bNC').onclick=nuevaCartera; $('bDP').onclick=()=>borrarPersona(SEL);
+  $('bF').onclick=guardarFicha; $('bNC').onclick=nuevaCartera; $('bDP').onclick=()=>borrarPersona(SEL); if($('bCarta'))$('bCarta').onclick=generarCarta;
   c.querySelectorAll('[data-gc]').forEach(b=>b.onclick=()=>guardarCartera(b.dataset.gc));
   c.querySelectorAll('[data-baja]').forEach(b=>b.onclick=()=>bajaCartera(b.dataset.baja));
   c.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>borrarCartera(b.dataset.del));
@@ -194,7 +237,7 @@ async function altaPersona(){ const n=$('nom').value.trim(); if(!n) return; cons
   const l=[['alta_persona',{id:pid,nombre:n,apellidos:a,email:'',telefono:'',idioma:'es'}]];
   if($('ci').checked){ const cid=crypto.randomUUID(); l.push(['alta_cartera',{id:cid,nombre:'Cartera individual',tipo:'individual'}]); l.push(['titular',{cartera:cid,persona:pid}]); }
   await apuntar(l); SEL=pid; await recargarYrender(); }
-async function guardarFicha(){ await apuntar([['edit_persona',{id:SEL,nombre:$('fn').value.trim(),apellidos:$('fa').value.trim(),email:$('fe').value.trim(),telefono:$('ft').value.trim(),idioma:$('fi').value}]]); await recargarYrender(); if($('fm'))$('fm').textContent='Guardado.'; }
+async function guardarFicha(){ await apuntar([['edit_persona',{id:SEL,nombre:$('fn').value.trim(),apellidos:$('fa').value.trim(),email:$('fe').value.trim(),telefono:$('ft').value.trim(),idioma:$('fi').value,dni:$('fdni').value.trim(),cuentaOrigen:$('fori').value.trim(),bancoDestino:$('fban').value.trim(),ibanDestino:$('fiban').value.trim()}]]); await recargarYrender(); if($('fm'))$('fm').textContent='Guardado.'; }
 async function nuevaCartera(){ const nombre=$('ncn').value.trim()||'Cartera'; const otros=[...document.querySelectorAll('.co:checked')].map(i=>i.value); const cid=crypto.randomUUID(); const tipo=otros.length?'conjunta':'individual';
   const l=[['alta_cartera',{id:cid,nombre,tipo}],['titular',{cartera:cid,persona:SEL}]]; for(const pid of otros) l.push(['titular',{cartera:cid,persona:pid}]); await apuntar(l); await recargarYrender(); }
 async function guardarCartera(cid){ await apuntar([['edit_cartera',{id:cid,nombre:document.querySelector(`[data-cn="${cid}"]`).value.trim(),tipo:document.querySelector(`[data-ct="${cid}"]`).value}]]); await recargarYrender(); }
@@ -211,6 +254,10 @@ async function borrarPersona(pid){ const st=ESTADO,p=st.personas[pid]; if(!p) re
   SEL=null; await recargarYrender(); }
 
 // ============ ACTUALIZAR ============
+function catGuess(n){n=(n||'').toLowerCase();
+  if(/japan|valentum|healthcare|invesco|s&p|equal weight|dividend|cgi|koala|equity/.test(n))return 'RV';
+  if(/iurisfond|sigma|monetari|renta fija/.test(n))return 'RF';
+  return 'Mixto';}
 function renderActualizar(){
   const st=ESTADO; const act=carterasActivas(st);
   if(!SELC && act.length) SELC=act[0].cid;
@@ -240,10 +287,10 @@ function renderActualizar(){
         <div class="row"><select id="vi">${insts.map(([id,i])=>`<option value="${id}">${i.nombre}</option>`).join('')}</select>
           <input id="vf" type="date" value="2026-08-31" style="background:#fff;border-color:var(--linea)"><input id="vv" inputmode="decimal" placeholder="VL" style="max-width:120px">
           <button class="ghost" id="bVL">Guardar VL</button></div></div></div>
-    <div class="card"><h2>Instrumentos (ISIN)</h2>
-      <p class="muted" style="margin-top:-6px;margin-bottom:12px">Escribe el ISIN de cada producto. Aparece en Análisis y en los informes.</p>
-      <table><thead><tr><th>Instrumento</th><th>Tipo</th><th>ISIN</th></tr></thead>
-        <tbody>${insts.map(([id,i])=>`<tr><td>${i.nombre}</td><td class="muted">${i.tipo}</td><td><input data-isin="${id}" value="${esc(i.isin||'')}" placeholder="ES0000000000" style="background:#fff;border-color:var(--linea);width:190px"></td></tr>`).join('')}</tbody></table>
+    <div class="card"><h2>Instrumentos (registro)</h2>
+      <p class="muted" style="margin-top:-6px;margin-bottom:12px">Categoría (RF/RV/Mixto) e ISIN de cada producto. Uso interno: no aparecen en el informe del cliente.</p>
+      <table><thead><tr><th>Instrumento</th><th>Tipo</th><th>Categoría</th><th>ISIN</th></tr></thead>
+        <tbody>${insts.map(([id,i])=>`<tr><td>${i.nombre}</td><td class="muted">${i.tipo}</td><td><select data-cat="${id}" style="background:#fff;border-color:var(--linea)">${['—','RF','RV','Mixto'].map(o=>`<option ${((i.categoria||catGuess(i.nombre))===o)?'selected':''}>${o}</option>`).join('')}</select></td><td><input data-isin="${id}" value="${esc(i.isin||'')}" placeholder="ES0000000000" style="background:#fff;border-color:var(--linea);width:170px"></td></tr>`).join('')}</tbody></table>
       <div class="row" style="margin-top:12px"><button class="primary" id="bISIN">Guardar ISIN</button><span class="muted" id="isinmsg"></span></div></div>`;
   $('selc').onchange=e=>{ SELC=e.target.value; renderActualizar(); };
   const t=$('mt'), usaF=()=>['Compra','Venta'].includes(t.value);
@@ -275,7 +322,7 @@ async function guardarVL(){ const inst=$('vi').value, f=$('vf').value, v=pnum($(
 
 async function guardarISIN(){
   const st=ESTADO; const cambios=[];
-  document.querySelectorAll('[data-isin]').forEach(inp=>{ const id=inp.dataset.isin, v=inp.value.trim(); if((st.instrumentos[id]&&st.instrumentos[id].isin||'')!==v) cambios.push(['edit_instrumento',{id,isin:v}]); });
+  document.querySelectorAll('[data-isin]').forEach(inp=>{ const id=inp.dataset.isin, v=inp.value.trim(); const ce=document.querySelector(`[data-cat="${id}"]`); const cat=(ce&&ce.value!=='—')?ce.value:''; const cur=st.instrumentos[id]||{}; if((cur.isin||'')!==v || (cur.categoria||'')!==cat) cambios.push(['edit_instrumento',{id,isin:v,categoria:cat}]); });
   if(cambios.length){ await apuntar(cambios); await recargarYrender(); if($('isinmsg'))$('isinmsg').textContent='Guardado.'; }
 }
 // ============ INFORMES ============
@@ -320,8 +367,8 @@ function genInforme(){
     segs.forEach((sg,i)=>{const d=sg.v/tot*C;g+=`<circle cx="80" cy="80" r="${r}" fill="none" stroke="${col[i%col.length]}" stroke-width="28" stroke-dasharray="${d} ${C-d}" stroke-dashoffset="${-off}" transform="rotate(-90 80 80)"/>`;off+=d;});
     const leg=segs.map((sg,i)=>`<div class="it"><span class="sw" style="background:${col[i%col.length]}"></span>${sg.n}<b> ${p1(sg.v/tot)}</b></div>`).join('');
     return `<div class="donut"><svg viewBox="0 0 160 160" style="width:150px">${g}<text x="80" y="76" text-anchor="middle" font-size="8" fill="#575755">TOTAL</text><text x="80" y="92" text-anchor="middle" font-size="12" font-weight="800">${e0(tot)}</text></svg><div class="leg">${leg}</div></div>`;};
-  const linea=(vals)=>{if(!vals.length)return '<div class="muted">Sin evolución mensual.</div>';const W=720,H=320,pL=44,pR=16,pT=20,pB=26;const cum=[];let acc=1;vals.forEach(v=>{acc*=(1+v);cum.push(acc-1);});const lo=Math.min(0,...cum),hi=Math.max(...cum)+0.01;const X=i=>pL+i*((W-pL-pR)/(cum.length-1||1)),Y=v=>pT+(H-pT-pB)*(1-(v-lo)/((hi-lo)||1));let g='';for(let k=0;k<=3;k++){const v=lo+(hi-lo)*k/3;g+=`<line x1="${pL}" y1="${Y(v)}" x2="${W-pR}" y2="${Y(v)}" stroke="#EFE7E7"/><text x="${pL-5}" y="${Y(v)+3}" text-anchor="end" font-size="8" fill="#999">${p1(v)}</text>`;}const pts=cum.map((v,i)=>`${X(i)},${Y(v)}`).join(' ');g+=`<polygon points="${pL},${Y(lo)} ${pts} ${W-pR},${Y(lo)}" fill="#8E7577" fill-opacity="0.1"/><polyline points="${pts}" fill="none" stroke="#8E7577" stroke-width="2"/>`;cum.forEach((v,i)=>{g+=`<circle cx="${X(i)}" cy="${Y(v)}" r="2.5" fill="#8E7577"/><text x="${X(i)}" y="${Y(v)-7}" text-anchor="middle" font-size="8" font-weight="700">${p1(v)}</text>`;});return `<div class="chart"><svg viewBox="0 0 ${W} ${H}">${g}</svg></div>`;};
-  const barras=(labels,vals)=>{if(!vals.length)return '';const W=560,H=250,pL=34,pR=10,pT=16,pB=22;const lo=Math.min(0,...vals),hi=Math.max(0,...vals),pad=(hi-lo)*0.15||0.02;const y0=lo-pad,y1=hi+pad,step=(W-pL-pR)/vals.length,bw=step*0.6,Y=v=>pT+(H-pT-pB)*(1-(v-y0)/((y1-y0)||1));let g=`<line x1="${pL}" y1="${Y(0)}" x2="${W-pR}" y2="${Y(0)}" stroke="#D9CFCF"/>`;vals.forEach((v,i)=>{const x=pL+i*step+step/2-bw/2,yt=Y(Math.max(0,v)),yb=Y(Math.min(0,v));g+=`<rect x="${x}" y="${yt}" width="${bw}" height="${Math.max(1,yb-yt)}" rx="2" fill="${v<0?'#575755':'#A98A8C'}"/><text x="${x+bw/2}" y="${v<0?yb+10:yt-3}" text-anchor="middle" font-size="8" font-weight="700">${p1(v)}</text><text x="${x+bw/2}" y="${H-8}" text-anchor="middle" font-size="8" fill="#575755">${labels[i]}</text>`;});return `<div class="chart"><svg viewBox="0 0 ${W} ${H}">${g}</svg></div>`;};
+  const linea=(vals)=>{if(!vals.length)return '<div class="muted">Sin evolución mensual.</div>';const W=720,H=300,pL=44,pR=16,pT=20,pB=26;const cum=[];let acc=1;vals.forEach(v=>{acc*=(1+v);cum.push(acc-1);});const lo=Math.min(0,...cum),hi=Math.max(...cum)+0.01;const X=i=>pL+i*((W-pL-pR)/(cum.length-1||1)),Y=v=>pT+(H-pT-pB)*(1-(v-lo)/((hi-lo)||1));let g='';for(let k=0;k<=3;k++){const v=lo+(hi-lo)*k/3;g+=`<line x1="${pL}" y1="${Y(v)}" x2="${W-pR}" y2="${Y(v)}" stroke="#EFE7E7"/><text x="${pL-5}" y="${Y(v)+3}" text-anchor="end" font-size="8" fill="#999">${p1(v)}</text>`;}const pts=cum.map((v,i)=>`${X(i)},${Y(v)}`).join(' ');g+=`<polygon points="${pL},${Y(lo)} ${pts} ${W-pR},${Y(lo)}" fill="#8E7577" fill-opacity="0.1"/><polyline points="${pts}" fill="none" stroke="#8E7577" stroke-width="2"/>`;cum.forEach((v,i)=>{g+=`<circle cx="${X(i)}" cy="${Y(v)}" r="2.5" fill="#8E7577"/><text x="${X(i)}" y="${Y(v)-7}" text-anchor="middle" font-size="8" font-weight="700">${p1(v)}</text>`;});return `<div class="chart"><svg viewBox="0 0 ${W} ${H}">${g}</svg></div>`;};
+  const barras=(labels,vals)=>{if(!vals.length)return '';const W=560,H=240,pL=34,pR=10,pT=16,pB=22;const lo=Math.min(0,...vals),hi=Math.max(0,...vals),pad=(hi-lo)*0.15||0.02;const y0=lo-pad,y1=hi+pad,step=(W-pL-pR)/vals.length,bw=step*0.6,Y=v=>pT+(H-pT-pB)*(1-(v-y0)/((y1-y0)||1));let g=`<line x1="${pL}" y1="${Y(0)}" x2="${W-pR}" y2="${Y(0)}" stroke="#D9CFCF"/>`;vals.forEach((v,i)=>{const x=pL+i*step+step/2-bw/2,yt=Y(Math.max(0,v)),yb=Y(Math.min(0,v));g+=`<rect x="${x}" y="${yt}" width="${bw}" height="${Math.max(1,yb-yt)}" rx="2" fill="${v<0?'#575755':'#A98A8C'}"/><text x="${x+bw/2}" y="${v<0?yb+10:yt-3}" text-anchor="middle" font-size="8" font-weight="700">${p1(v)}</text><text x="${x+bw/2}" y="${H-8}" text-anchor="middle" font-size="8" fill="#575755">${labels[i]}</text>`;});return `<div class="chart"><svg viewBox="0 0 ${W} ${H}">${g}</svg></div>`;};
   const MES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const kpi=(ic,k,v)=>`<div class="kpi"><div class="kic">${ic}</div><div class="ktx"><div class="k">${k}</div><div class="v">${v}</div></div></div>`;
   const secbar=(t,cap)=>`<div class="secbar"><span class="st">${t}</span>${cap?`<span class="cap">${cap}</span>`:''}</div>`;
