@@ -37,8 +37,8 @@ function entrar(){
       <div class="tab" data-t="actualizar">Actualizar</div>
       <div class="tab" data-t="informes">Informes</div>
     </div><div class="wrap" id="view"></div>`;
-  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{ TAB=t.dataset.t; pintarTabs(); render(); });
-  pintarTabs(); recargarYrender(); window.addEventListener('focus',recargarYrender);
+  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{ TAB=t.dataset.t; pintarTabs(); recargarYrender(); });
+  pintarTabs(); recargarYrender(); window.addEventListener('focus',()=>{ const el=document.activeElement; if(el&&/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return; if(TAB==='clientes'||TAB==='actualizar') return; recargarYrender(); });
 }
 function pintarTabs(){ document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.t===TAB)); }
 async function recargarYrender(){ try{ ESTADO=Libro.reconstruir(await Libro.cargarEventos(VAULT)); }catch(e){ ESTADO=Libro.reconstruir([]); } render(); }
@@ -153,7 +153,9 @@ async function generarCarta(){
       B(`Barcelona, ${fechaLarga(fecha)}`),V(),V(),B('RENTA 4',{bold:true}),V(),B('Buenos días,'),V(),B(cuerpo),V(),B('Muchas gracias.'),V(),B('Atentamente,'),V(),V(),V(),V(),B(`NOMBRE  ${nombre}`),B(`DNI       ${dni}`)]}]});
     const blob=await D.Packer.toBlob(doc), a=document.createElement('a');
     a.href=URL.createObjectURL(blob); a.download=`Transferencia_${nombre.replace(/\s+/g,'_')}_${fecha}.docx`; a.click(); URL.revokeObjectURL(a.href);
-    msg.textContent='✓ Word descargado';
+    const reg=$('tdisp')&&$('tdisp').checked&&$('tcart')&&$('tcart').value;
+    if(reg){ await apuntar([['movimiento',{cartera:$('tcart').value,fecha,efectivo_delta:-importe,titulos_delta:0}]]); await recargarYrender(); }
+    else { msg.textContent='✓ Word descargado'; }
   }catch(e){ msg.textContent='No se pudo generar (¿sin conexión?).'; }
 }
 // ============ CLIENTES ============
@@ -220,6 +222,7 @@ function renderFicha(){
       <h2>Carta de transferencia (Renta 4)</h2>
       <p class="muted" style="margin:-4px 0 10px">Usa los datos de arriba (DNI y cuentas). Los guardas en la ficha o los rellenas solo para esta carta.</p>
       <div class="row"><label class="chk">Fecha <input id="tfecha" type="date" value="2026-08-31"></label><input id="timp" placeholder="Importe (€)" inputmode="decimal" style="max-width:160px"></div>
+      <div class="row" style="margin-top:8px"><label class="chk">Cartera <select id="tcart">${cartsDe(st,SEL).map(c=>`<option value="${c.cid}">${esc(c.nombre)}</option>`).join('')||'<option value="">(sin cartera)</option>'}</select></label><label class="chk"><input type="checkbox" id="tdisp" checked> registrar la salida como Disposición (concilia el patrimonio)</label></div>
       <div class="row" style="margin-top:10px"><button class="primary" id="bCarta">Generar Word</button><span class="muted" id="tmsg"></span></div></div>
     <div style="margin-top:12px;border-top:1px solid var(--linea);padding-top:12px">
       <div class="row"><input id="ncn" placeholder="Nombre nueva cartera" value="Cartera individual" style="flex:1"></div>
