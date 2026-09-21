@@ -59,7 +59,7 @@ async function anexar(vault, autor, tipo, payload) {
 }
 
 function reconstruir(eventos) {
-  const e = { personas: {}, instrumentos: {}, carteras: {}, titulares: {}, vl: {}, movimientos: [], planes: {}, hist: {}, conflictos: [] };
+  const e = { personas: {}, instrumentos: {}, servicios: {}, svc: { clientes:{}, series:{} }, carteras: {}, titulares: {}, vl: {}, movimientos: [], planes: {}, hist: {}, conflictos: [] };
   const anuladas = new Set();
   for (const ev of eventos) {
     const p = ev.payload || {};
@@ -68,6 +68,9 @@ function reconstruir(eventos) {
       case 'edit_persona':     e.personas[p.id] = Object.assign(e.personas[p.id] || {}, p); break;
       case 'alta_instrumento': e.instrumentos[p.id] = p; break;
       case 'edit_instrumento': e.instrumentos[p.id] = Object.assign(e.instrumentos[p.id] || {}, p); break;
+      case 'servicio': e.servicios[p.servicio] = Object.assign(e.servicios[p.servicio] || {}, p); break;
+      case 'svc_cliente': e.svc.clientes[p.servicio+'|'+p.nombre] = p; break;
+      case 'svc_serie': e.svc.series[p.servicio] = p.serie; break;
       case 'vl':               (e.vl[p.instrumento] ||= {})[p.fecha] = p.valor; break;
       case 'alta_cartera':     e.carteras[p.id] = p; break;
       case 'edit_cartera':     e.carteras[p.id] = Object.assign(e.carteras[p.id] || {}, p); break;

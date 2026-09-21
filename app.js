@@ -28,10 +28,11 @@ function pantallaConexion(hg){
   $('bg').onclick=()=>{ localStorage.setItem('autor',AUTOR); entrar(); }; rg();
 }
 
-let TAB='analisis';
+let TAB='panel';
 function entrar(){
   document.body.innerHTML=`<div class="top"><span class="brand">Gestor de Carteras</span><span class="user">Usuario: ${AUTOR} · datos en OneDrive</span></div>
     <div class="tabs">
+      <div class="tab" data-t="panel">Panel</div>
       <div class="tab" data-t="analisis">Análisis</div>
       <div class="tab" data-t="clientes">Clientes</div>
       <div class="tab" data-t="actualizar">Actualizar</div>
@@ -42,7 +43,7 @@ function entrar(){
 }
 function pintarTabs(){ document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.t===TAB)); }
 async function recargarYrender(){ try{ ESTADO=Libro.reconstruir(await Libro.cargarEventos(VAULT)); }catch(e){ ESTADO=Libro.reconstruir([]); } render(); }
-function render(){ ({analisis:renderAnalisis,clientes:renderClientes,actualizar:renderActualizar,informes:renderInformes}[TAB])(); }
+function render(){ ({panel:renderPanel,analisis:renderAnalisis,clientes:renderClientes,actualizar:renderActualizar,informes:renderInformes}[TAB])(); }
 
 // ---- helpers ----
 async function apuntar(l){ for(const [t,p] of l) await Libro.anexar(VAULT,AUTOR,t,p); }
@@ -61,6 +62,76 @@ function productos(st, cids){
   return Object.entries(prod).sort((a,b)=>b[1].valor-a[1].valor).map(([inst,v])=>({inst,nombre:st.instrumentos[inst]?.nombre||'—',valor:v.valor,n:v.n,pct:v.valor/tot}));
 }
 
+// ============ PANEL ============
+function sparkEUR(serie){
+  if(!serie||serie.length<2) return '<p class="muted">Sin serie mensual.</p>';
+  const W=640,H=170,pL=10,pR=10,pT=22,pB=26, vs=serie.map(s=>s[1]);
+  const mn=Math.min(...vs),mx=Math.max(...vs),rg=(mx-mn)||1;
+  const X=i=>pL+i*(W-pL-pR)/(serie.length-1), Y=v=>pT+(1-(v-mn)/rg)*(H-pT-pB);
+  const pts=serie.map((s,i)=>X(i)+','+Y(s[1])).join(' ');
+  const area=pL+','+(H-pB)+' '+pts+' '+(W-pR)+','+(H-pB);
+  const M=['','ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return '<div class="chart"><svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto">'
+    +'<polygon points="'+area+'" fill="var(--salmon-pal)" opacity=".55"/>'
+    +'<polyline points="'+pts+'" fill="none" stroke="var(--salmon-osc)" stroke-width="2.5"/>'
+    +serie.map((s,i)=>{const mm=+s[0].slice(5);return '<circle cx="'+X(i)+'" cy="'+Y(s[1])+'" r="3" fill="var(--salmon-osc)"/>'
+      +'<text x="'+X(i)+'" y="'+(H-9)+'" font-size="9" text-anchor="middle" fill="var(--gris)">'+(M[mm]||s[0].slice(5))+'</text>';}).join('')
+    +'</svg></div>';
+}
+function renderPanel(){
+  const st=ESTADO, act=carterasActivas(st);
+  const assetPat=act.reduce((a,c)=>a+Libro.patrimonio(st,c.cid),0), assetN=Object.keys(st.personas).length;
+  const yrs={}; act.forEach(c=>(st.hist[c.cid]&&st.hist[c.cid].anual||[]).forEach(y=>{const o=yrs[y.a]||(yrs[y.a]={ini:0,res:0}); o.ini+=y.ini||0; o.res+=(y.res!=null?y.res:0); yrs[y.a]=o;}));
+  const assetRent=yrs[2026]&&yrs[2026].ini?yrs[2026].res/yrs[2026].ini:null;
+  const rentsA=Object.keys(yrs).sort().map(a=>yrs[a].ini?yrs[a].res/yrs[a].ini:0);
+  const volA=rentsA.length?stdev(rentsA):null, ddA=rentsA.length?maxDD(rentsA):null;
+  const svc=(st.svc&&st.svc.clientes)?Object.values(st.svc.clientes):[];
+  const series=(st.svc&&st.svc.series)||{};
+  const wl=svc.filter(c=>c.servicio==='wealth'), gs=svc.filter(c=>c.servicio==='gestion');
+  const sum=a=>a.reduce((x,c)=>x+(c.patrimonio||0),0);
+  let wYtd=null; const ws=series.wealth; if(ws&&ws.length>=2&&ws[0][1]) wYtd=ws[ws.length-1][1]/ws[0][1]-1;
+  const filas=[
+    {n:'Asset (comercialización)',pat:assetPat,cli:assetN,rent:assetRent,fecha:'en vivo'},
+    {n:'Wealth (asesoramiento)',pat:sum(wl),cli:wl.length,rent:wYtd,fecha:'ago–sep 2026'},
+    {n:'Gestión de Carteras',pat:sum(gs),cli:gs.length,rent:0.08,fecha:'11/09/2026'}
+  ];
+  const total=filas.reduce((a,f)=>a+f.pat,0)||1;
+  const distinct=assetN + new Set(svc.map(c=>c.nombre)).size;
+  const relaciones=assetN + svc.length;
+  const nom2=c=>c.nombre;
+  const listaWl=wl.slice().sort((a,b)=>b.patrimonio-a.patrimonio).map(c=>`<div class="r2"><span>${c.nombre}</span><b>${eur(c.patrimonio)}</b></div>`).join('');
+  const listaGs=gs.map(c=>`<div class="r2"><span>${c.nombre}</span><b>${eur(c.patrimonio)}</b></div>`).join('');
+  const medio=f=>f.cli?eur(f.pat/f.cli):'—';
+  $('view').innerHTML=`<h1>Panel general</h1>
+    <div class="card"><h2>Resumen</h2>
+      <div class="kpis3">
+        <div class="mini"><div class="k">Patrimonio total (AUM)</div><div class="v">${eur(total)}</div></div>
+        <div class="mini"><div class="k">Clientes distintos</div><div class="v">${distinct}</div></div>
+        <div class="mini"><div class="k">Relaciones de servicio</div><div class="v">${relaciones}</div></div>
+      </div>
+      <p class="muted" style="margin-top:10px;font-size:11.5px">Asset se calcula en vivo desde la app. Wealth y Gestión provienen de los seguimientos de cada cliente (última cifra disponible, ago–sep 2026). Luis Larriba figura en Wealth y Gestión: cuenta como un cliente y dos relaciones.</p></div>
+    <div class="card"><h2>Patrimonio por servicio</h2>
+      <table><thead><tr><th>Servicio</th><th class="num">Patrimonio</th><th class="num">Peso</th><th class="num">Clientes</th><th class="num">Rent. 2026</th><th class="num">Medio/cliente</th><th class="num">A fecha</th></tr></thead>
+        <tbody>${filas.map(f=>`<tr><td>${f.n}</td><td class="num">${eur(f.pat)}</td><td class="num">${pct(f.pat/total)}</td><td class="num">${f.cli}</td><td class="num">${f.rent!=null?pct(f.rent):'—'}</td><td class="num">${medio(f)}</td><td class="num" style="font-size:11px;color:var(--gris)">${f.fecha}</td></tr>`).join('')}
+        <tr class="tot"><td>Total</td><td class="num">${eur(total)}</td><td class="num">100,0 %</td><td class="num">${relaciones}</td><td></td><td></td><td></td></tr></tbody></table>
+      <div style="display:flex;justify-content:center;margin-top:20px;padding-top:18px;border-top:1px solid var(--linea)">${donutSVG(filas.filter(f=>f.pat>0).map(f=>({n:f.n,v:f.pat})))}</div></div>
+    <div class="card"><h2>Evolución mensual · Wealth</h2>
+      <p class="muted" style="margin-top:-6px;margin-bottom:8px">Patrimonio de los 7 clientes Wealth con seguimiento mensual (Luis se incorpora en el total actual).</p>
+      ${sparkEUR(series.wealth)}</div>
+    <div class="card"><h2>Quién tiene qué</h2>
+      <div class="cols2">
+        <div><h3 style="font-size:13px;color:var(--salmon-osc);margin:4px 0 8px">Wealth (${wl.length})</h3><div class="card2">${listaWl||'<span class="muted">—</span>'}</div></div>
+        <div><h3 style="font-size:13px;color:var(--salmon-osc);margin:4px 0 8px">Gestión de Carteras (${gs.length})</h3><div class="card2">${listaGs||'<span class="muted">—</span>'}</div>
+          <h3 style="font-size:13px;color:var(--salmon-osc);margin:14px 0 8px">Asset (${assetN})</h3><p class="muted" style="font-size:11.5px">Los ${assetN} clientes de comercialización; detalle en la pestaña Clientes. Enric Coll figura aquí (es Wealth, pero se mantiene en Asset para su informe; no se duplica).</p></div>
+      </div></div>
+    <div class="card"><h2>Ratios</h2>
+      <div class="kpis3">
+        <div class="mini"><div class="k">Rent. 2026 Asset</div><div class="v">${assetRent!=null?pct(assetRent):'—'}</div></div>
+        <div class="mini"><div class="k">Volatilidad anual Asset</div><div class="v">${volA!=null?pct(volA):'—'}</div></div>
+        <div class="mini"><div class="k">Caída máxima Asset</div><div class="v">${ddA!=null?pct(ddA):'—'}</div></div>
+      </div>
+      <p class="muted" style="margin-top:10px;font-size:11.5px">Volatilidad y caída máxima calculadas sobre el histórico anual del conjunto Asset. Para Wealth y Gestión se mostrarán en cuanto haya varios cierres mensuales en la serie.</p></div>`;
+}
 // ============ ANÁLISIS ============
 function stdev(a){if(a.length<2)return 0;const m=a.reduce((x,y)=>x+y,0)/a.length;return Math.sqrt(a.reduce((x,y)=>x+(y-m)*(y-m),0)/(a.length-1));}
 function maxDD(rents){let idx=1,peak=1,dd=0;for(const r of rents){idx*=(1+(r||0));peak=Math.max(peak,idx);dd=Math.min(dd,idx/peak-1);}return dd;}
