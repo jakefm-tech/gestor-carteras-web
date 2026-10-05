@@ -59,7 +59,7 @@ async function anexar(vault, autor, tipo, payload) {
 }
 
 function reconstruir(eventos) {
-  const e = { personas: {}, instrumentos: {}, servicios: {}, svc: { clientes:{}, series:{} }, carteras: {}, titulares: {}, vl: {}, movimientos: [], planes: {}, hist: {}, conflictos: [] };
+  const e = { personas: {}, instrumentos: {}, servicios: {}, svc: { clientes:{}, series:{} }, carteras: {}, titulares: {}, vl: {}, movimientos: [], planes: {}, hist: {}, rentmes: {}, conflictos: [] };
   const anuladas = new Set();
   for (const ev of eventos) {
     const p = ev.payload || {};
@@ -78,6 +78,7 @@ function reconstruir(eventos) {
       case 'quita_titular':    e.titulares[p.cartera]?.delete(p.persona); break;
       case 'plan':             e.planes[p.id] = p; break;
       case 'hist':             e.hist[p.cartera] = p; break;
+      case 'rent_mes':         (e.rentmes[p.cartera] ||= {})[p.mes] = p.rent; break;
       case 'movimiento':       e.movimientos.push({ ...p, _id: ev.id, autor: ev.autor }); break;
       case 'correccion':
         if (p.anula) { if (anuladas.has(p.anula)) e.conflictos.push({ tipo: 'doble-correccion', objetivo: p.anula }); anuladas.add(p.anula); }

@@ -51,6 +51,9 @@ async function apuntar(l){ for(const [t,p] of l) await Libro.anexar(VAULT,AUTOR,
 const titularesDe=(st,cid)=>[...(st.titulares[cid]||[])];
 const cartsDe=(st,pid)=>Object.entries(st.carteras).filter(([cid,c])=>!c.baja&&titularesDe(st,cid).includes(pid)).map(([cid,c])=>({cid,...c}));
 const vlUlt=(st,inst)=>{ const m=st.vl[inst]||{}; const f=Object.keys(m).sort(); return f.length?m[f[f.length-1]]:null; };
+const vlUltF=(st,inst)=>{ const m=st.vl[inst]||{}; const f=Object.keys(m).sort(); return f.length?[f[f.length-1],m[f[f.length-1]]]:null; };
+function finMesPrevio(iso){ const [y,m]=(iso||'').split('-').map(Number); if(!y||!m) return ''; return new Date(Date.UTC(y,m-1,0)).toISOString().slice(0,10); }
+function rentMes(st,cid,P,F){ const Vend=Libro.patrimonio(st,cid,F), Vbeg=Libro.patrimonio(st,cid,P); if(!(Vbeg>0)) return null; let flow=0; for(const mv of st.movimientos){ if(mv.cartera!==cid||!mv.fecha) continue; if(mv.fecha>P && mv.fecha<=F && (mv.tipo==='Aportación'||mv.tipo==='Disposición')) flow+=(mv.efectivo_delta||0); } const den=Vbeg+0.5*flow; if(!(den>0)) return null; return (Vend-Vbeg-flow)/den; }
 const carterasActivas=(st)=>Object.entries(st.carteras).filter(([,c])=>!c.baja).map(([cid,c])=>({cid,...c}));
 function productos(st, cids){
   const set=new Set(cids); const prod={};
@@ -384,10 +387,10 @@ async function guardarMov(){
     else instId=mi;
     const tit=imp/pre;
     ev.push(['vl',{instrumento:instId,fecha,valor:pre}]); // valora al VL de compra si no hay otro
-    ev.push(['movimiento',{cartera:SELC,fecha,instrumento:instId,titulos_delta:tipo==='Compra'?tit:-tit,efectivo_delta:tipo==='Compra'?-imp:imp,precio:pre}]);
+    ev.push(['movimiento',{cartera:SELC,fecha,instrumento:instId,titulos_delta:tipo==='Compra'?tit:-tit,efectivo_delta:tipo==='Compra'?-imp:imp,precio:pre,tipo}]);
   } else {
     const signo=['Aportación','Dividendo'].includes(tipo)?1:-1;
-    ev.push(['movimiento',{cartera:SELC,fecha,efectivo_delta:signo*imp,titulos_delta:0}]);
+    ev.push(['movimiento',{cartera:SELC,fecha,efectivo_delta:signo*imp,titulos_delta:0,tipo}]);
   }
   await apuntar(ev); $('mimp').value=''; $('mpre').value=''; if($('mnew'))$('mnew').value=''; await recargarYrender();
 }
@@ -398,7 +401,11 @@ async function guardarVLs(){ const f=$('vfecha').value, m=$('vlmsg'); if(m)m.tex
   document.querySelectorAll('[data-vl]').forEach(inp=>{ const v=pnum(inp.value); if(isNaN(v)||v<=0) return; const a=parseFloat(inp.dataset.actual); if(a && Math.abs(v/a-1)>0.15){ const nm=inp.closest('tr').children[0].textContent; avisos.push(`• ${nm}: ${fmt(a)} → ${fmt(v)} (${((v/a-1)*100).toFixed(1).replace('.',',')}%)`); } ev.push(['vl',{instrumento:inp.dataset.vl,fecha:f,valor:v}]); });
   if(!ev.length){ if(m)m.textContent='No has puesto ningún VL.'; return; }
   if(avisos.length && !confirm('Estos valores cambian más de un 15% respecto al anterior. ¿Seguro que son correctos?\n\n'+avisos.join('\n'))) return;
-  await apuntar(ev); await recargarYrender(); }
+  await apuntar(ev); await recargarYrender();
+  const st=ESTADO, P=finMesPrevio(f), mes=f.slice(0,7), rev=[];
+  if(P) carterasActivas(st).forEach(c=>{ const r=rentMes(st,c.cid,P,f); if(r!=null && Math.abs(r)<=0.25) rev.push(['rent_mes',{cartera:c.cid,mes,rent:Math.round(r*1e6)/1e6,fecha:f}]); });
+  if(rev.length){ await apuntar(rev); await recargarYrender(); }
+  if($('vlmsg'))$('vlmsg').textContent='Guardado. Rentabilidad del mes calculada para '+rev.length+' carteras.'; }
 
 async function guardarISIN(){
   const st=ESTADO; const cambios=[];
@@ -412,9 +419,9 @@ function renderValores(){
     <div class="card"><h2>Cierre de valores liquidativos</h2>
       <p class="muted" style="margin-top:-6px;margin-bottom:10px">Solo el precio de los fondos (seguimiento mensual), no las compras y ventas de clientes. Pon la fecha de cierre una vez y rellena solo los VL que cambien.</p>
       <div class="row" style="margin-bottom:8px;align-items:center"><label class="chk">Fecha de cierre <input id="vfecha" type="date" style="background:#fff;border-color:var(--linea)"></label><button class="primary" id="bVLs">Guardar VL</button><span class="muted" id="vlmsg"></span></div>
-      <table><thead><tr><th>Fondo</th><th class="num">VL actual</th><th class="num">VL nuevo</th><th class="num">Variación</th></tr></thead>
-        <tbody>${insts.map(([id,i])=>{const u=vlUlt(st,id);return `<tr><td>${i.nombre}</td><td class="num muted">${u!=null?new Intl.NumberFormat('es-ES',{maximumFractionDigits:6}).format(u):'—'}</td><td class="num"><input data-vl="${id}" data-actual="${u!=null?u:''}" inputmode="decimal" placeholder="—" style="width:130px;text-align:right;background:#fff;border-color:var(--linea)"></td><td class="num" data-var="${id}" style="font-size:11px;color:var(--gris)">—</td></tr>`;}).join('')}</tbody></table></div>`;
-  $('bVLs').onclick=guardarVLs; $('vfecha').value=new Date().toISOString().slice(0,10);
+      <table><thead><tr><th>Fondo</th><th class="num">Último VL</th><th class="num">VL del cierre</th><th class="num">Variación</th></tr></thead>
+        <tbody>${insts.map(([id,i])=>{const vf=vlUltF(st,id);return `<tr><td>${i.nombre}</td><td class="num muted">${vf?new Intl.NumberFormat('es-ES',{maximumFractionDigits:6}).format(vf[1])+' · '+vf[0].slice(8,10)+'/'+vf[0].slice(5,7):'—'}</td><td class="num"><input data-vl="${id}" data-actual="${u!=null?u:''}" inputmode="decimal" placeholder="—" style="width:130px;text-align:right;background:#fff;border-color:var(--linea)"></td><td class="num" data-var="${id}" style="font-size:11px;color:var(--gris)">—</td></tr>`;}).join('')}</tbody></table></div>`;
+  $('bVLs').onclick=guardarVLs; $('vfecha').value=finMesPrevio(new Date().toISOString().slice(0,10));
   document.querySelectorAll('[data-vl]').forEach(inp=>{ inp.oninput=()=>{ const a=parseFloat(inp.dataset.actual), v=pnum(inp.value); const cell=document.querySelector(`[data-var="${inp.dataset.vl}"]`); if(!cell)return; if(isNaN(v)||!a){ cell.textContent='—'; cell.style.color='var(--gris)'; cell.style.fontWeight='400'; return; } const d=v/a-1, big=Math.abs(d)>0.15; cell.textContent=(d>=0?'+':'')+(d*100).toFixed(1).replace('.',',')+' %'; cell.style.color=big?'#B0453B':'var(--gris)'; cell.style.fontWeight=big?'700':'400'; }; });
 }
 // ============ INFORMES ============
@@ -448,7 +455,9 @@ function genInforme(){
   cids.forEach(c=>(st.hist[c]?.anual||[]).forEach(y=>{const o=anualMap[y.a]||(anualMap[y.a]={a:y.a,ini:0,fin:0,ap:0,re:0,res:0,rents:[]});o.ini+=y.ini||0;o.fin+=y.fin||0;o.ap+=y.ap||0;o.re+=y.re||0;o.res+=(y.res!=null?y.res:0);if(y.rent!=null)o.rents.push(y.rent);}));
   const A=Object.values(anualMap).sort((x,y)=>x.a-y.a).map(y=>({...y,rent:y.rents.length===1?y.rents[0]:(y.ini?y.res/y.ini:null)}));
   // mensual: la cartera con más meses
-  let M=[]; cids.forEach(c=>{const m=st.hist[c]?.mensual||[]; if(m.length>M.length) M=m;});
+  let base=[], cidMain=cids[0]; cids.forEach(c=>{const m=st.hist[c]?.mensual||[]; if(m.length>base.length){base=m;cidMain=c;}});
+  const rm=(st.rentmes&&st.rentmes[cidMain])||{}; let M=[];
+  for(let i=0;i<12;i++){ const mm='2026-'+String(i+1).padStart(2,'0'); if(rm[mm]!=null) M.push(rm[mm]); else if(i<base.length) M.push(base[i]); else break; }
   const ops=cids.flatMap(c=>st.hist[c]?.operaciones||[]);
   const last=A[A.length-1]||{};
   const desdeIni=A.reduce((a,y)=>a*(1+(y.rent||0)),1)-1;
