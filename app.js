@@ -357,10 +357,11 @@ function renderActualizar(){
         <table><thead><tr><th>Fondo</th><th class="num">Títulos</th><th class="num">VL</th><th class="num">Valor</th></tr></thead>
           <tbody>${pos.map(p=>`<tr><td>${st.instrumentos[p.inst]?.nombre||'—'}</td><td class="num">${new Intl.NumberFormat('es-ES',{maximumFractionDigits:4}).format(p.tit)}</td><td class="num">${p.vl?new Intl.NumberFormat('es-ES',{maximumFractionDigits:4}).format(p.vl):'—'}</td><td class="num">${p.valor!=null?eur(p.valor):'—'}</td></tr>`).join('')||'<tr><td colspan="4" class="muted">Sin posiciones.</td></tr>'}
           <tr class="liq"><td>Liquidez</td><td class="num">—</td><td class="num">—</td><td class="num">${eur(liq)}</td></tr></tbody></table>
-        <h2 style="margin-top:16px">Actualizar VL de un fondo</h2>
-        <div class="row"><select id="vi">${insts.map(([id,i])=>`<option value="${id}">${i.nombre}</option>`).join('')}</select>
-          <input id="vf" type="date" value="2026-08-31" style="background:#fff;border-color:var(--linea)"><input id="vv" inputmode="decimal" placeholder="VL" style="max-width:120px">
-          <button class="ghost" id="bVL">Guardar VL</button></div></div></div>
+        <h2 style="margin-top:16px">Actualizar valores liquidativos</h2>
+        <p class="muted" style="margin-top:-6px;margin-bottom:8px">Pon la fecha de cierre una vez y rellena solo los VL que cambien. No hay que elegir fondo ni fecha uno a uno.</p>
+        <div class="row" style="margin-bottom:8px;align-items:center"><label class="chk">Fecha de cierre <input id="vfecha" type="date" style="background:#fff;border-color:var(--linea)"></label><button class="primary" id="bVLs">Guardar VL</button><span class="muted" id="vlmsg"></span></div>
+        <table><thead><tr><th>Fondo</th><th class="num">VL actual</th><th class="num">VL nuevo</th><th class="num">Variación</th></tr></thead>
+          <tbody>${insts.map(([id,i])=>{const u=vlUlt(st,id);return `<tr><td>${i.nombre}</td><td class="num muted">${u!=null?new Intl.NumberFormat('es-ES',{maximumFractionDigits:6}).format(u):'—'}</td><td class="num"><input data-vl="${id}" data-actual="${u!=null?u:''}" inputmode="decimal" placeholder="—" style="width:130px;text-align:right;background:#fff;border-color:var(--linea)"></td><td class="num" data-var="${id}" style="font-size:11px;color:var(--gris)">—</td></tr>`;}).join('')}</tbody></table></div></div>
     <div class="card"><h2>Instrumentos (registro)</h2>
       <p class="muted" style="margin-top:-6px;margin-bottom:12px">Categoría (RF/RV/Mixto) e ISIN de cada producto. Uso interno: no aparecen en el informe del cliente.</p>
       <table><thead><tr><th>Instrumento</th><th>Tipo</th><th>Categoría</th><th>ISIN</th></tr></thead>
@@ -370,7 +371,8 @@ function renderActualizar(){
   const t=$('mt'), usaF=()=>['Compra','Venta'].includes(t.value);
   const sync=()=>{ $('fInst').style.display=usaF()?'':'none'; $('fPre').style.display=usaF()?'':'none'; $('fNew').style.display=(usaF()&&$('mi').value==='__n')?'':'none'; };
   t.onchange=sync; $('mi').onchange=sync; sync();
-  $('bMov').onclick=guardarMov; $('bVL').onclick=guardarVL; if($('bISIN'))$('bISIN').onclick=guardarISIN;
+  $('bMov').onclick=guardarMov; if($('bVLs'))$('bVLs').onclick=guardarVLs; if($('bISIN'))$('bISIN').onclick=guardarISIN; if($('vfecha'))$('vfecha').value=new Date().toISOString().slice(0,10);
+  document.querySelectorAll('[data-vl]').forEach(inp=>{ inp.oninput=()=>{ const a=parseFloat(inp.dataset.actual), v=pnum(inp.value); const cell=document.querySelector(`[data-var="${inp.dataset.vl}"]`); if(!cell)return; if(isNaN(v)||!a){ cell.textContent='—'; cell.style.color='var(--gris)'; cell.style.fontWeight='400'; return; } const d=v/a-1, big=Math.abs(d)>0.15; cell.textContent=(d>=0?'+':'')+(d*100).toFixed(1).replace('.',',')+' %'; cell.style.color=big?'#B0453B':'var(--gris)'; cell.style.fontWeight=big?'700':'400'; }; });
 }
 const pnum=s=>{ s=String(s||'').trim().replace(/\s/g,''); if(!s) return NaN; if(s.includes(',')) s=s.replace(/\./g,'').replace(',','.'); return parseFloat(s); };
 async function guardarMov(){
@@ -393,6 +395,13 @@ async function guardarMov(){
   await apuntar(ev); $('mimp').value=''; $('mpre').value=''; if($('mnew'))$('mnew').value=''; await recargarYrender();
 }
 async function guardarVL(){ const inst=$('vi').value, f=$('vf').value, v=pnum($('vv').value); if(isNaN(v)) return; await apuntar([['vl',{instrumento:inst,fecha:f,valor:v}]]); await recargarYrender(); }
+async function guardarVLs(){ const f=$('vfecha').value, m=$('vlmsg'); if(m)m.textContent=''; if(!f){ if(m)m.textContent='Pon la fecha de cierre.'; return; }
+  const fmt=x=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:6}).format(x);
+  const ev=[], avisos=[];
+  document.querySelectorAll('[data-vl]').forEach(inp=>{ const v=pnum(inp.value); if(isNaN(v)||v<=0) return; const a=parseFloat(inp.dataset.actual); if(a && Math.abs(v/a-1)>0.15){ const nm=inp.closest('tr').children[0].textContent; avisos.push(`• ${nm}: ${fmt(a)} → ${fmt(v)} (${((v/a-1)*100).toFixed(1).replace('.',',')}%)`); } ev.push(['vl',{instrumento:inp.dataset.vl,fecha:f,valor:v}]); });
+  if(!ev.length){ if(m)m.textContent='No has puesto ningún VL.'; return; }
+  if(avisos.length && !confirm('Estos valores cambian más de un 15% respecto al anterior. ¿Seguro que son correctos?\n\n'+avisos.join('\n'))) return;
+  await apuntar(ev); await recargarYrender(); }
 
 async function guardarISIN(){
   const st=ESTADO; const cambios=[];
