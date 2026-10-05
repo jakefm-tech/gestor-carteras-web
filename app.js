@@ -115,10 +115,10 @@ function renderPanel(){
       </div>
       <p class="muted" style="margin-top:10px;font-size:11.5px">Asset se calcula en vivo desde la app. Wealth y Gestión provienen de los seguimientos de cada cliente (última cifra disponible, ago–sep 2026). Luis Larriba figura en Wealth y Gestión: cuenta como un cliente y dos relaciones.</p></div>
     <div class="card"><h2>Patrimonio por servicio</h2>
-      <table><thead><tr><th>Servicio</th><th class="num">Patrimonio</th><th class="num">Peso</th><th class="num">Clientes</th><th class="num">Rent. 2026</th><th class="num">Medio/cliente</th><th class="num">A fecha</th></tr></thead>
+      <div class="cols2" style="grid-template-columns:minmax(0,1fr) 296px;align-items:center;gap:22px"><div style="overflow-x:auto"><table><thead><tr><th>Servicio</th><th class="num">Patrimonio</th><th class="num">Peso</th><th class="num">Clientes</th><th class="num">Rent. 2026</th><th class="num">Medio/cliente</th><th class="num">A fecha</th></tr></thead>
         <tbody>${filas.map(f=>`<tr><td>${f.n}</td><td class="num">${eur(f.pat)}</td><td class="num">${pct(f.pat/total)}</td><td class="num">${f.cli}</td><td class="num">${f.rent!=null?pct(f.rent):'—'}</td><td class="num">${medio(f)}</td><td class="num" style="font-size:11px;color:var(--gris)">${f.fecha}</td></tr>`).join('')}
-        <tr class="tot"><td>Total</td><td class="num">${eur(total)}</td><td class="num">100,0 %</td><td class="num">${relaciones}</td><td></td><td></td><td></td></tr></tbody></table>
-      <div style="display:flex;justify-content:center;margin-top:20px;padding-top:18px;border-top:1px solid var(--linea)">${donutSVG(filas.filter(f=>f.pat>0).map(f=>({n:f.n,v:f.pat})))}</div></div>
+        <tr class="tot"><td>Total</td><td class="num">${eur(total)}</td><td class="num">100,0 %</td><td class="num">${relaciones}</td><td></td><td></td><td></td></tr></tbody></table></div>
+      <div style="display:flex;justify-content:center">${donutSVG(filas.filter(f=>f.pat>0).map(f=>({n:f.n.split(' ')[0],v:f.pat})))}</div></div></div>
     <div class="card"><h2>Evolución mensual · Wealth</h2>
       <p class="muted" style="margin-top:-6px;margin-bottom:8px">Patrimonio de los 7 clientes Wealth con seguimiento mensual (Luis se incorpora en el total actual).</p>
       ${sparkEUR(series.wealth)}</div>
