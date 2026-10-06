@@ -66,13 +66,19 @@ select{padding:7px 9px;border:1px solid var(--amarillo-b);border-radius:7px;font
 .donut{display:flex;gap:14px;align-items:center;justify-content:center}
 .donut .leg{font-size:11px;display:flex;flex-direction:column;gap:5px}
 .donut .it{display:flex;gap:6px;align-items:center}.donut .sw{width:10px;height:10px;border-radius:3px}
-.chart{width:100%}.chart svg{width:100%;height:auto;display:block}
+.chart{width:100%;height:100%;display:flex;align-items:center}.chart svg{width:100%;height:100%;display:block}
 .card2{background:var(--beige);border:1px solid var(--linea);border-radius:8px;padding:10px 12px}
 .card2 .r2{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--linea);font-size:12px}.card2 .r2:last-child{border:none}
 .aviso2{font-size:10.5px;color:var(--gris);line-height:1.5;text-align:justify}
 
 #doc{display:flex;flex-direction:column;align-items:center}
-#doc .page{width:100%;max-width:1060px;margin:0 auto 20px;padding:18px 22px;border:1px solid var(--linea);border-radius:8px;background:#fff}
+#doc .page{width:100%;max-width:1060px;margin:0 auto 20px;padding:18px 22px;border:1px solid var(--linea);border-radius:8px;background:#fff;display:flex;flex-direction:column;min-height:730px}
+#doc .body{flex:1;display:flex;flex-direction:column;gap:14px}
+#doc .cols2.grow{flex:1;min-height:0}
+#doc .cols2.grow>div{display:flex;flex-direction:column;min-height:0}
+#doc .cols2.grow .panel{flex:1;display:flex;align-items:center;justify-content:center}
+#doc .grow.col{display:flex;flex-direction:column;flex:1;min-height:0}
+#doc .grow.col .panel{flex:1}
 
 #doc .htop{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid var(--salmon-osc);padding-bottom:10px;margin-bottom:16px}
 #doc .htop .t{font-size:21px;font-weight:800;color:var(--salmon-osc);letter-spacing:.4px}
@@ -105,22 +111,20 @@ select{padding:7px 9px;border:1px solid var(--amarillo-b);border-radius:7px;font
 #doc .riesgo{margin:8px 2px 0;font-size:11px;color:#4b4642}
 
 /* ===================== IMPRESIÓN ===================== */
-@page{size:A4 landscape;margin:9mm}
+@page{size:A4 landscape;margin:0}
 @media print{
   .top,.tabs,.no-print{display:none!important}
+  #view>h1,#view>.card{display:none!important}
   .wrap{padding:0!important;margin:0!important;max-width:none!important}
   #doc{align-items:stretch!important}
-  #doc .page{max-width:none!important;width:auto!important;margin:0!important;padding:0!important;border:none!important;box-shadow:none!important;
-    height:auto!important;min-height:0!important;overflow:visible!important;
-    page-break-after:always;break-after:page;page-break-inside:auto!important;break-inside:auto!important}
+  #doc .page{width:297mm!important;height:210mm!important;max-height:210mm!important;padding:9mm!important;box-sizing:border-box!important;
+    margin:0!important;border:none!important;box-shadow:none!important;overflow:hidden!important;
+    page-break-inside:avoid;break-inside:avoid}
+  #doc .page+.page{page-break-before:always;break-before:page}
   #doc .page:last-child{page-break-after:auto;break-after:auto}
   #doc .secbar{page-break-after:avoid;break-after:avoid}
   #doc .cols2,#doc .card2,#doc .aviso2,#doc .chart,#doc table.anual,#doc table.comp{page-break-inside:avoid;break-inside:avoid}
   #doc table.ops tr{page-break-inside:avoid;break-inside:avoid}
-  #doc{font-size:11px}
-  #doc table{font-size:10px}
-  #doc table thead th{font-size:8.7px;padding:5px 9px}
-  #doc table tbody td{padding:4px 9px}
   #doc table.ops{font-size:9.5px}
   #doc table.ops thead th{font-size:8.2px;padding:4px 7px}
   #doc table.ops tbody td{padding:3px 7px;line-height:1.3}
