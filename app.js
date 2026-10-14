@@ -406,7 +406,7 @@ async function guardarVLs(){ const f=$('vfecha').value, m=$('vlmsg'); if(m)m.tex
 
 async function guardarISIN(){
   const st=ESTADO; const cambios=[];
-  document.querySelectorAll('[data-isin]').forEach(inp=>{ const id=inp.dataset.isin, v=inp.value.trim(); const ce=document.querySelector(`[data-cat="${id}"]`); const cat=(ce&&ce.value!=='—')?ce.value:''; const cur=st.instrumentos[id]||{}; if((cur.isin||'')!==v || (cur.categoria||'')!==cat) cambios.push(['edit_instrumento',{id,isin:v,categoria:cat}]); });
+  document.querySelectorAll('[data-isin]').forEach(inp=>{ const id=inp.dataset.isin, v=inp.value.trim(); const ce=document.querySelector(`[data-cat="${id}"]`); const cat=(ce&&ce.value!=='—')?ce.value:''; const cgEl=document.querySelector(`[data-cg="${id}"]`), cxEl=document.querySelector(`[data-cx="${id}"]`); const g=cgEl?pnum(cgEl.value):NaN, x=cxEl?pnum(cxEl.value):NaN; const ng=isNaN(g)?null:g, nx=isNaN(x)?null:x; const cur=st.instrumentos[id]||{}; if((cur.isin||'')!==v || (cur.categoria||'')!==cat || (cur.comGestion==null?null:cur.comGestion)!==ng || (cur.comExito==null?null:cur.comExito)!==nx) cambios.push(['edit_instrumento',{id,isin:v,categoria:cat,comGestion:ng,comExito:nx}]); });
   if(cambios.length){ await apuntar(cambios); await recargarYrender(); if($('isinmsg'))$('isinmsg').textContent='Guardado.'; }
 }
 function renderValores(){
@@ -419,19 +419,20 @@ function renderValores(){
       <table><thead><tr><th>Fondo</th><th class="num">Último VL</th><th class="num">VL del cierre</th><th class="num">Variación</th></tr></thead>
         <tbody>${insts.map(([id,i])=>{const vf=vlUltF(st,id);return `<tr><td>${i.nombre}</td><td class="num muted">${vf?new Intl.NumberFormat('es-ES',{maximumFractionDigits:6}).format(vf[1])+' · '+vf[0].slice(8,10)+'/'+vf[0].slice(5,7):'—'}</td><td class="num"><input data-vl="${id}" data-actual="${vf?vf[1]:''}" inputmode="decimal" placeholder="—" style="width:130px;text-align:right;background:#fff;border-color:var(--linea)"></td><td class="num" data-var="${id}" style="font-size:11px;color:var(--gris)">—</td></tr>`;}).join('')}</tbody></table></div>
     <div class="card"><h2>Maestro de valores</h2>
-      <p class="muted" style="margin-top:-6px;margin-bottom:12px">Categoría (RF/RV/Mixto) e ISIN de cada producto. Uso interno: no aparecen en el informe del cliente.</p>
-      <table><thead><tr><th>Instrumento</th><th>Tipo</th><th>Categoría</th><th>ISIN</th></tr></thead>
-        <tbody>${insts.map(([id,i])=>`<tr><td>${i.nombre}</td><td class="muted">${i.tipo}</td><td><select data-cat="${id}" style="background:#fff;border-color:var(--linea)">${['—','RF','RV','Mixto'].map(o=>`<option ${((i.categoria||catGuess(i.nombre))===o)?'selected':''}>${o}</option>`).join('')}</select></td><td><input data-isin="${id}" value="${esc(i.isin||'')}" placeholder="ES0000000000" style="background:#fff;border-color:var(--linea);width:170px"></td></tr>`).join('')}</tbody></table>
+      <p class="muted" style="margin-top:-6px;margin-bottom:12px">Categoría (RF/RV/Mixto), ISIN y comisiones (gestión y éxito) de cada producto. Uso interno. Las comisiones alimentan el cálculo de las propuestas.</p>
+      <table><thead><tr><th>Instrumento</th><th>Tipo</th><th>Categoría</th><th>ISIN</th><th class="num">Gestión %</th><th class="num">Éxito %</th></tr></thead>
+        <tbody>${insts.map(([id,i])=>`<tr><td>${i.nombre}</td><td class="muted">${i.tipo}</td><td><select data-cat="${id}" style="background:#fff;border-color:var(--linea)">${['—','RF','RV','Mixto'].map(o=>`<option ${((i.categoria||catGuess(i.nombre))===o)?'selected':''}>${o}</option>`).join('')}</select></td><td><input data-isin="${id}" value="${esc(i.isin||'')}" placeholder="ES0000000000" style="background:#fff;border-color:var(--linea);width:170px"></td><td class="num"><input data-cg="${id}" value="${i.comGestion!=null?String(i.comGestion).replace('.',','):''}" placeholder="—" style="background:#fff;border-color:var(--linea);width:58px;text-align:right"></td><td class="num"><input data-cx="${id}" value="${i.comExito!=null?String(i.comExito).replace('.',','):''}" placeholder="—" style="background:#fff;border-color:var(--linea);width:58px;text-align:right"></td></tr>`).join('')}</tbody></table>
       <div class="row" style="margin-top:12px"><button class="primary" id="bISIN">Guardar</button><span class="muted" id="isinmsg"></span></div></div>`;
   $('bVLs').onclick=guardarVLs; if($('bISIN'))$('bISIN').onclick=guardarISIN; $('vfecha').value=finMesPrevio(new Date().toISOString().slice(0,10));
   document.querySelectorAll('[data-vl]').forEach(inp=>{ inp.oninput=()=>{ const a=parseFloat(inp.dataset.actual), v=pnum(inp.value); const cell=document.querySelector(`[data-var="${inp.dataset.vl}"]`); if(!cell)return; if(isNaN(v)||!a){ cell.textContent='—'; cell.style.color='var(--gris)'; cell.style.fontWeight='400'; return; } const d=v/a-1, big=Math.abs(d)>0.15; cell.textContent=(d>=0?'+':'')+(d*100).toFixed(1).replace('.',',')+' %'; cell.style.color=big?'#B0453B':'var(--gris)'; cell.style.fontWeight=big?'700':'400'; }; });
 }
 // ============ INFORMES ============
 function pPROP(){ return window.PROP||(window.PROP={tipo:'asset',cliTipo:'exist',cli:'',fut:'',nif:'',edad:'',importe:'',tc:{},ti:{},sel:{},mercados:'',fundam:'',vista:'flujo'}); }
-function propFondos(){ const st=ESTADO,P=pPROP(),fdb=st.fondos||{};
+function propNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\b(gesiuris|fi|fil|sicav|fund|funds|clase|de|del|la|el|y)\b/g,' ').replace(/\s+/g,' ').trim(); }
+function propInst(nombre){ const n=propNorm(nombre); for(const i of Object.values(ESTADO.instrumentos)){ const m=propNorm(i.nombre); if(!m)continue; if((n&&(n.includes(m)||m.includes(n)))){return i;} const kw=m.split(' ').filter(w=>w.length>3); if(kw.length&&kw.every(w=>n.includes(w))){return i;} } return null; }
+function propFondos(){ const P=pPROP();
   const rvDef=v=>{v=String(v||'').toUpperCase(); if(v.startsWith('RVM'))return 60; if(v.startsWith('RV'))return 100; if(v==='GLOB')return 50; if(v.startsWith('RFM'))return 20; if(v.startsWith('RF'))return 0; return 50;};
-  const extra=Object.values(fdb).filter(x=>x.custom && !FONDOS_UNIVERSO.some(u=>u.n===x.fondo)).map(x=>({n:x.fondo,g:x.g||'T',v:x.v||''}));
-  let fs=[...FONDOS_UNIVERSO,...extra].map(f=>{const d=fdb[f.n]||{};return {n:f.n,g:f.g,v:f.v,rv:d.rv!=null?d.rv:rvDef(f.v),gestion:d.gestion,exito:d.exito};});
+  let fs=FONDOS_UNIVERSO.map(f=>{const i=propInst(f.n);return {n:f.n,g:f.g,v:f.v,rv:rvDef(f.v),gestion:i&&i.comGestion!=null?i.comGestion:null,exito:i&&i.comExito!=null?i.comExito:null};});
   if(P.tipo==='asset') fs=fs.filter(f=>f.g==='G');
   return fs;
 }
@@ -460,7 +461,7 @@ function renderPropuestas(){
   const sel='style="background:#fff;border-color:var(--linea)"';
   const fs=propFondos();
   const cv=calcConv(), id=calcIdon();
-  const disponibles=P.tipo==='asset'? fs.filter(f=>cv.conv(f)) : fs;
+  const disponibles=fs;
   // resumen cartera
   let sumw=0,rvp=0,gesp=0; const selArr=Object.entries(P.sel||{}).filter(([n,w])=>fs.some(f=>f.n===n)&&(+w)>0);
   selArr.forEach(([n,w])=>{const f=fs.find(x=>x.n===n);w=+w;sumw+=w;rvp+=w*(f.rv||0);gesp+=w*(f.gestion||0);});
@@ -522,11 +523,11 @@ function renderPropuestas(){
   </div>
 
   <div class="card"><h2>3 · Cartera propuesta</h2>
-    <p class="muted" style="margin-top:-6px;margin-bottom:10px">${P.tipo==='asset'?'Marca los fondos Gesiuris convenientes para el cliente y asigna peso (%).':'Añade los fondos que compondrán la cartera (los indica el asesor) y asigna peso (%).'}</p>
+    <p class="muted" style="margin-top:-6px;margin-bottom:10px">${P.tipo==='asset'?'Marca los fondos Gesiuris para la cartera y asigna peso (%).':'Añade los fondos que compondrán la cartera (los indica el asesor) y asigna peso (%).'}</p>
     ${P.tipo==='asset'?`
     <table><thead><tr><th></th><th>Fondo</th><th>Vocación</th><th class="num">RV %</th><th class="num">Peso %</th></tr></thead><tbody>
     ${disponibles.map(f=>{const w=P.sel[f.n]||'';return `<tr><td><input type="checkbox" data-selc="${f.n}" ${w?'checked':''}></td><td>${f.n}</td><td class="muted">${voc[f.v]||f.v||'—'}</td><td class="num muted">${f.rv!=null?f.rv:'—'}</td><td class="num"><input data-selw="${f.n}" value="${w?String(w).replace('.',','):''}" ${nn}></td></tr>`;}).join('')}
-    ${disponibles.length?'':'<tr><td colspan="5" class="muted">Completa el test para ver fondos convenientes.</td></tr>'}
+    ${disponibles.length?'':'<tr><td colspan="5" class="muted">Sin fondos.</td></tr>'}
     </tbody></table>`:`
     <table><thead><tr><th>Fondo</th><th>Vocación</th><th class="num">RV %</th><th class="num">Peso %</th><th></th></tr></thead><tbody>
     ${Object.keys(P.sel||{}).filter(n=>fs.some(f=>f.n===n)).map(n=>{const f=fs.find(x=>x.n===n);const w=P.sel[n];return `<tr><td>${n}</td><td class="muted">${voc[f.v]||f.v||'—'}</td><td class="num muted">${f.rv!=null?f.rv:'—'}</td><td class="num"><input data-selw="${n}" value="${w?String(w).replace('.',','):''}" ${nn}></td><td class="num"><button data-selx="${n}" title="Quitar" style="border:none;background:none;color:#B0453B;cursor:pointer;font-size:16px;line-height:1">×</button></td></tr>`;}).join('')||'<tr><td colspan="5" class="muted">Aún no has añadido fondos. Usa el desplegable de abajo.</td></tr>'}
@@ -545,12 +546,8 @@ function renderPropuestas(){
   </div>
 
   <div class="card" style="max-width:820px"><h2 class="muted" style="color:var(--gris)">Configuración</h2>
-    <details><summary class="muted" style="cursor:pointer">Maestro de fondos y perfiles</summary>
-    <div style="margin-top:12px"><table><thead><tr><th>Fondo</th><th>Gestora</th><th>ISIN</th><th class="num">RV %</th><th class="num">Gestión %</th><th class="num">Éxito %</th></tr></thead><tbody>
-    ${fs.map(f=>{const d=fdb[f.n]||{};return `<tr><td>${f.n}</td><td class="muted">${f.g==='G'?'Gesiuris':'Tercero'}</td><td><input data-fi="${f.n}" value="${d.isin||''}" placeholder="ES…" style="width:130px;padding:5px;border:1px solid var(--linea);border-radius:6px;background:#fff"></td><td class="num"><input data-fr="${f.n}" value="${f.rv!=null?String(f.rv).replace('.',','):''}" ${nn}></td><td class="num"><input data-fg="${f.n}" value="${d.gestion!=null?String(d.gestion).replace('.',','):''}" placeholder="—" ${nn}></td><td class="num"><input data-fx="${f.n}" value="${d.exito!=null?String(d.exito).replace('.',','):''}" placeholder="—" ${nn}></td></tr>`;}).join('')}
-    </tbody></table>
-    <div class="row" style="margin-top:10px;gap:10px;flex-wrap:wrap;align-items:center"><button class="primary" id="bFon">Guardar fondos</button>
-      <input id="nfN" placeholder="Añadir: nombre" style="width:180px;padding:5px 8px;border:1px solid var(--linea);border-radius:6px;background:#fff"><input id="nfI" placeholder="ISIN" style="width:120px;padding:5px 8px;border:1px solid var(--linea);border-radius:6px;background:#fff"><select id="nfG" ${sel}><option value="T">Tercero</option><option value="G">Gesiuris</option></select><select id="nfV" ${sel}>${Object.keys(voc).map(k=>`<option value="${k}">${voc[k]}</option>`).join('')}</select><input id="nfR" placeholder="RV%" ${nn}><button class="primary" id="bAdd">Añadir fondo</button><span class="muted" id="fonMsg"></span></div>
+    <details><summary class="muted" style="cursor:pointer">Perfiles de idoneidad</summary>
+    <div style="margin-top:12px">
     <h3 style="margin-top:18px">Perfiles de idoneidad <span class="muted" style="font-weight:400;font-size:12px">— tramos provisionales, a validar con Gesiuris</span></h3>
     <table><thead><tr><th>Perfil</th><th class="num">Desde</th><th class="num">Hasta</th><th class="num">RV máx %</th></tr></thead><tbody>
     ${perfiles.map(([n,a,b,rvm])=>{const d=per[n]||{};return `<tr><td>${n}</td><td class="num"><input data-pa="${n}" value="${d.desde!=null?d.desde:a}" ${nn}></td><td class="num"><input data-pb="${n}" value="${d.hasta!=null?d.hasta:b}" ${nn}></td><td class="num"><input data-pr="${n}" value="${d.rvmax!=null?d.rvmax:rvm}" ${nn}></td></tr>`;}).join('')}
@@ -584,12 +581,6 @@ function renderPropuestas(){
     else { pr.innerHTML=`Puntuación total: <b>${id.total}</b> · Perfil: <b>${id.perfil}</b> · RV máx.: <b>${id.rvmax}%</b>.`; } }
   actualizarResumenCartera();
   // config saves
-  if($('bFon'))$('bFon').onclick=async()=>{const camb=[];const q=(a,n)=>document.querySelector('['+a+'="'+(window.CSS?CSS.escape(n):n)+'"]');
-    fs.forEach(f=>{const n=f.n,d=(st.fondos||{})[n]||{};const isin=(q('data-fi',n).value||'').trim(),rv=pnum(q('data-fr',n).value),g=pnum(q('data-fg',n).value),x=pnum(q('data-fx',n).value);
-      const nv={isin:isin||null,rv:isNaN(rv)?null:rv,gestion:isNaN(g)?null:g,exito:isNaN(x)?null:x};
-      if((d.isin||null)!==nv.isin||(d.rv==null?null:d.rv)!==nv.rv||(d.gestion==null?null:d.gestion)!==nv.gestion||(d.exito==null?null:d.exito)!==nv.exito)camb.push(['fondo',{fondo:n,...nv}]);});
-    if(camb.length){await apuntar(camb);await recargarYrender();if($('fonMsg'))$('fonMsg').textContent='Guardado.';}};
-  if($('bAdd'))$('bAdd').onclick=async()=>{const n=$('nfN').value.trim();if(!n)return;await apuntar([['fondo',{fondo:n,custom:true,g:$('nfG').value,v:$('nfV').value,isin:$('nfI').value.trim()||null,rv:isNaN(pnum($('nfR').value))?null:pnum($('nfR').value)}]]);await recargarYrender();};
   if($('bPer'))$('bPer').onclick=async()=>{const camb=[];const q=(a,n)=>document.querySelector('['+a+'="'+(window.CSS?CSS.escape(n):n)+'"]');
     perfiles.forEach(row=>{const n=row[0],d=(st.perfiles||{})[n]||{};const a=pnum(q('data-pa',n).value),b=pnum(q('data-pb',n).value),r=pnum(q('data-pr',n).value);
       const nv={desde:isNaN(a)?null:a,hasta:isNaN(b)?null:b,rvmax:isNaN(r)?null:r};
