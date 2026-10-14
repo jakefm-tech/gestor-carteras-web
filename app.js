@@ -442,7 +442,8 @@ function calcConv(){ const P=pPROP(),t=P.tc||{};
   return {p1,conv};
 }
 function calcIdon(){ const P=pPROP(),t=P.ti||{},per=ESTADO.perfiles||{};
-  const total=(+t.patr||0)+(+t.horiz||0)+(+t.obj||0)+(+t.tol||0)+(+t.exp||0)+(+t.form||0);
+  const sk=['ingresos','act_inv','act_inm','horiz','obj','tol','exp_dep','exp_rf','exp_frf','exp_frv','exp_acc','exp_hf','frec','vol','con_cred','con_rent','con_div','con_liq','form'];
+  const total=sk.reduce((a,k)=>a+(+t[k]||0),0);
   const def=[['Conservador',0,10,25],['Moderado',11,20,45],['Balanced',21,30,65],['Crecimiento',31,999,100]];
   let perfil='—',rvmax=100;
   for(const [n,a,b,rvm] of def){ const d=per[n]||{}; const lo=d.desde!=null?d.desde:a, hi=d.hasta!=null?d.hasta:(n==='Crecimiento'?999:b), rr=d.rvmax!=null?d.rvmax:rvm;
@@ -451,7 +452,7 @@ function calcIdon(){ const P=pPROP(),t=P.ti||{},per=ESTADO.perfiles||{};
 }
 
 function renderPropuestas(){
-  const st=ESTADO, P=pPROP();
+  const st=ESTADO, P=pPROP(); const t=P.ti||{};
   if(P.vista==='doc'){ return genPropuestaDoc(); }
   const fdb=st.fondos||{}, per=st.perfiles||{};
   const voc={RFME:'RF mixta euro',RFE:'RF euro',RFI:'RF internacional',RFMI:'RF mixta int.',GLOB:'Global',RVE:'RV euro',RVME:'RV mixta euro',RVMI:'RV mixta int.',RVI:'RV internacional'};
@@ -494,23 +495,43 @@ function renderPropuestas(){
       <label class="chk"><input type="checkbox" data-tc="eFIL" ${P.tc.eFIL?'checked':''}> FIL</label></div>
     <p id="pResult" class="muted" style="margin-top:12px"></p>`
   :`
+    <div class="muted" style="font-weight:700;margin-bottom:6px">Situación financiera</div>
     <div class="row" style="gap:18px;flex-wrap:wrap">
-      <label>Patrimonio<br><select data-ti="patr" ${sel}><option value="0">&lt; 20.000 €</option><option value="1">20.000–54.000 €</option><option value="2">&gt; 54.000 €</option></select></label>
-      <label>Horizonte<br><select data-ti="horiz" ${sel}><option value="0">&lt; 6 meses</option><option value="2">6 m – 2 años</option><option value="5">2 – 5 años</option><option value="8">&gt; 5 años</option></select></label>
-      <label>Objetivo<br><select data-ti="obj" ${sel}><option value="0">Protección del capital</option><option value="2">Rent. moderada, riesgo limitado</option><option value="6">Oportunidades asumiendo riesgo</option><option value="8">Crecimiento fuerte</option></select></label>
-      <label>Tolerancia a pérdida<br><select data-ti="tol" ${sel}><option value="0">Muy baja (sin pérdida)</option><option value="2">Baja (hasta 3%)</option><option value="5">Media (hasta 10%)</option><option value="8">Elevada (&gt;10%)</option></select></label>
-      <label>Experiencia (nº productos)<br><select data-ti="exp" ${sel}><option value="0">Ninguna</option><option value="2">1–2</option><option value="4">3–4</option><option value="6">5+</option></select></label>
-      <label>Formación<br><select data-ti="form" ${sel}><option value="0">Sin formación / sin sector</option><option value="1">Universitaria o sector</option><option value="2">Universitaria y sector</option></select></label>
+      <label>Fuente de ingresos<br><select data-tis="fuente" ${sel}>${['Trabajador cuenta ajena','Trabajador cuenta propia','Pensionista/Rentista','Empresario/Empresa','Sin remuneración periódica'].map(o=>`<option ${t.fuente===o?'selected':''}>${o}</option>`).join('')}</select></label>
+      <label>Ingresos anuales<br><select data-ti="ingresos" ${sel}><option value="0" ${t.ingresos=='0'?'selected':''}>&lt; 20.000 €</option><option value="1" ${t.ingresos=='1'?'selected':''}>20.000–54.000 €</option><option value="2" ${t.ingresos=='2'?'selected':''}>&gt; 54.000 €</option></select></label>
+      <label>Compromisos (hipoteca, créditos…)<br><select data-tis="compromisos" ${sel}>${['No','Sí, menos del 30% de ingresos','Sí, más del 30% de ingresos'].map(o=>`<option ${t.compromisos===o?'selected':''}>${o}</option>`).join('')}</select></label>
     </div>
+    <div class="row" style="gap:16px;margin-top:8px"><span class="muted">Otros activos financieros:</span><label class="chk"><input type="checkbox" data-tic="act_inv" data-pts="2" ${t.act_inv?'checked':''}> Inversiones</label> <label class="chk"><input type="checkbox" data-tic="act_inm" data-pts="1" ${t.act_inm?'checked':''}> Inmuebles</label> <label class="chk"><input type="checkbox" data-tic="act_liq" data-pts="0" ${t.act_liq?'checked':''}> Activos líquidos</label></div>
+    <div class="muted" style="font-weight:700;margin:14px 0 6px">Objetivos de inversión</div>
+    <div class="row" style="gap:18px;flex-wrap:wrap">
+      <label>Horizonte<br><select data-ti="horiz" ${sel}><option value="0" ${t.horiz=='0'?'selected':''}>&lt; 6 meses</option><option value="2" ${t.horiz=='2'?'selected':''}>6 m – 2 años</option><option value="5" ${t.horiz=='5'?'selected':''}>2 – 5 años</option><option value="8" ${t.horiz=='8'?'selected':''}>&gt; 5 años</option></select></label>
+      <label>Finalidad<br><select data-ti="obj" ${sel}><option value="0" ${t.obj=='0'?'selected':''}>Protección del capital</option><option value="2" ${t.obj=='2'?'selected':''}>Rent. moderada, riesgo limitado</option><option value="6" ${t.obj=='6'?'selected':''}>Oportunidades asumiendo riesgo</option><option value="8" ${t.obj=='8'?'selected':''}>Crecimiento fuerte</option></select></label>
+      <label>Tolerancia a pérdida<br><select data-ti="tol" ${sel}><option value="0" ${t.tol=='0'?'selected':''}>Muy baja (sin pérdida)</option><option value="2" ${t.tol=='2'?'selected':''}>Baja (hasta 3%)</option><option value="5" ${t.tol=='5'?'selected':''}>Media (hasta 10%)</option><option value="8" ${t.tol=='8'?'selected':''}>Elevada (&gt;10%)</option></select></label>
+    </div>
+    <div class="muted" style="font-weight:700;margin:14px 0 6px">Experiencia y conocimientos</div>
+    <div class="row" style="gap:14px;flex-wrap:wrap"><span class="muted">Familiarizado con:</span><label class="chk"><input type="checkbox" data-tic="exp_dep" data-pts="1" ${t.exp_dep?'checked':''}> Depósitos</label> <label class="chk"><input type="checkbox" data-tic="exp_rf" data-pts="1" ${t.exp_rf?'checked':''}> Renta fija</label> <label class="chk"><input type="checkbox" data-tic="exp_frf" data-pts="1" ${t.exp_frf?'checked':''}> Fondos RF</label> <label class="chk"><input type="checkbox" data-tic="exp_frv" data-pts="1" ${t.exp_frv?'checked':''}> Fondos RV</label> <label class="chk"><input type="checkbox" data-tic="exp_acc" data-pts="1" ${t.exp_acc?'checked':''}> Acciones</label> <label class="chk"><input type="checkbox" data-tic="exp_hf" data-pts="1" ${t.exp_hf?'checked':''}> Hedge funds</label></div>
+    <div class="row" style="gap:18px;margin-top:8px;flex-wrap:wrap">
+      <label>Operaciones/año<br><select data-ti="frec" ${sel}><option value="1" ${t.frec=='1'?'selected':''}>0–2</option><option value="2" ${t.frec=='2'?'selected':''}>2–5</option><option value="3" ${t.frec=='3'?'selected':''}>&gt; 5</option></select></label>
+      <label>Volumen operado<br><select data-ti="vol" ${sel}><option value="1" ${t.vol=='1'?'selected':''}>0–500.000 €</option><option value="1" ${t.vol=='1'?'selected':''}>&gt; 500.000 €</option></select></label>
+    </div>
+    <div class="row" style="gap:14px;margin-top:8px;flex-wrap:wrap"><span class="muted">De acuerdo con:</span><label class="chk"><input type="checkbox" data-tic="con_cred" data-pts="1" ${t.con_cred?'checked':''}> Riesgo de crédito = impago del emisor</label> <label class="chk"><input type="checkbox" data-tic="con_rent" data-pts="1" ${t.con_rent?'checked':''}> Más rentabilidad esperada = más riesgo</label> <label class="chk"><input type="checkbox" data-tic="con_div" data-pts="1" ${t.con_div?'checked':''}> Cartera diversificada = menos riesgo</label> <label class="chk"><input type="checkbox" data-tic="con_liq" data-pts="1" ${t.con_liq?'checked':''}> Escasa liquidez = difícil deshacer posición</label></div>
+    <div style="margin-top:8px"><label>Actividad laboral / formación<br><select data-ti="form" ${sel}><option value="0" ${t.form=='0'?'selected':''}>Sin formación univ. ni sector</option><option value="1" ${t.form=='1'?'selected':''}>Sector financiero (sin univ.)</option><option value="1" ${t.form=='1'?'selected':''}>Universitaria (sin sector)</option><option value="2" ${t.form=='2'?'selected':''}>Universitaria y sector</option></select></label></div>
+    <div class="muted" style="font-weight:700;margin:14px 0 6px">Preferencias de sostenibilidad</div>
+    <div class="row"><label>¿Tiene preferencias de sostenibilidad?<br><select data-tis="sost" ${sel}>${['No','Sí','Delego en la Entidad'].map(o=>`<option ${t.sost===o?'selected':''}>${o}</option>`).join('')}</select></label></div>
     <p id="pResult" class="muted" style="margin-top:12px"></p>`}
   </div>
 
   <div class="card"><h2>3 · Cartera propuesta</h2>
-    <p class="muted" style="margin-top:-6px;margin-bottom:10px">${P.tipo==='asset'?'Fondos Gesiuris convenientes para el cliente.':'Universo Wealth (Gesiuris + terceros).'} Marca fondos y asigna peso (%).</p>
+    <p class="muted" style="margin-top:-6px;margin-bottom:10px">${P.tipo==='asset'?'Marca los fondos Gesiuris convenientes para el cliente y asigna peso (%).':'Añade los fondos que compondrán la cartera (los indica el asesor) y asigna peso (%).'}</p>
+    ${P.tipo==='asset'?`
     <table><thead><tr><th></th><th>Fondo</th><th>Vocación</th><th class="num">RV %</th><th class="num">Peso %</th></tr></thead><tbody>
     ${disponibles.map(f=>{const w=P.sel[f.n]||'';return `<tr><td><input type="checkbox" data-selc="${f.n}" ${w?'checked':''}></td><td>${f.n}</td><td class="muted">${voc[f.v]||f.v||'—'}</td><td class="num muted">${f.rv!=null?f.rv:'—'}</td><td class="num"><input data-selw="${f.n}" value="${w?String(w).replace('.',','):''}" ${nn}></td></tr>`;}).join('')}
     ${disponibles.length?'':'<tr><td colspan="5" class="muted">Completa el test para ver fondos convenientes.</td></tr>'}
+    </tbody></table>`:`
+    <table><thead><tr><th>Fondo</th><th>Vocación</th><th class="num">RV %</th><th class="num">Peso %</th><th></th></tr></thead><tbody>
+    ${Object.keys(P.sel||{}).filter(n=>fs.some(f=>f.n===n)).map(n=>{const f=fs.find(x=>x.n===n);const w=P.sel[n];return `<tr><td>${n}</td><td class="muted">${voc[f.v]||f.v||'—'}</td><td class="num muted">${f.rv!=null?f.rv:'—'}</td><td class="num"><input data-selw="${n}" value="${w?String(w).replace('.',','):''}" ${nn}></td><td class="num"><button data-selx="${n}" title="Quitar" style="border:none;background:none;color:#B0453B;cursor:pointer;font-size:16px;line-height:1">×</button></td></tr>`;}).join('')||'<tr><td colspan="5" class="muted">Aún no has añadido fondos. Usa el desplegable de abajo.</td></tr>'}
     </tbody></table>
+    <div class="row" style="margin-top:10px;gap:10px;align-items:center"><select id="wAdd" style="background:#fff;border-color:var(--linea);min-width:280px"><option value="">— Añadir fondo a la cartera —</option>${fs.filter(f=>!(P.sel&&P.sel[f.n]!=null)).map(f=>`<option value="${f.n}">${f.n} (${f.g==='G'?'Gesiuris':'Tercero'})</option>`).join('')}</select><input id="wW" placeholder="peso %" ${nn}><button class="primary" id="bWAdd">Añadir</button></div>`}
     <div id="pCartResumen" style="margin-top:12px"></div>
   </div>
 
@@ -548,8 +569,12 @@ function renderPropuestas(){
   if($('pImp'))$('pImp').oninput=e=>{P.importe=e.target.value;};
   document.querySelectorAll('[data-tc]').forEach(el=>{const k=el.dataset.tc; el.onchange=()=>{P.tc[k]=el.type==='checkbox'?el.checked:el.value; re();};});
   document.querySelectorAll('[data-ti]').forEach(el=>{const k=el.dataset.ti; el.onchange=()=>{P.ti[k]=el.value; re();};});
+  document.querySelectorAll('[data-tic]').forEach(el=>{const k=el.dataset.tic; el.onchange=()=>{P.ti[k]=el.checked?(+el.dataset.pts||0):0; re();};});
+  document.querySelectorAll('[data-tis]').forEach(el=>{const k=el.dataset.tis; el.onchange=()=>{P.ti[k]=el.value; actualizarResumenCartera();};});
   document.querySelectorAll('[data-selc]').forEach(el=>{const n=el.dataset.selc; el.onchange=()=>{ if(el.checked){ if(!P.sel[n])P.sel[n]=0; } else delete P.sel[n]; re(); };});
   document.querySelectorAll('[data-selw]').forEach(el=>{const n=el.dataset.selw; el.oninput=()=>{ const v=pnum(el.value); P.sel[n]=isNaN(v)?0:v; actualizarResumenCartera(); };});
+  document.querySelectorAll('[data-selx]').forEach(el=>{el.onclick=()=>{ delete P.sel[el.dataset.selx]; re(); };});
+  if($('bWAdd'))$('bWAdd').onclick=()=>{ const n=$('wAdd').value; if(!n)return; const w=pnum($('wW').value); P.sel[n]=isNaN(w)?0:w; re(); };
   if($('pMerc'))$('pMerc').oninput=e=>{P.mercados=e.target.value;};
   if($('pFund'))$('pFund').oninput=e=>{P.fundam=e.target.value;};
   $('bDoc').onclick=()=>{ P.vista='doc'; renderPropuestas(); };
@@ -650,6 +675,7 @@ function renderSimulador(){
       <div><div class="muted" style="font-size:12px;margin-bottom:4px">Rentabilidad anual estimada (%)</div><input id="simRent" type="text" placeholder="5,0" ${inp}></div>
       <div><div class="muted" style="font-size:12px;margin-bottom:4px">Comisión de gestión (% anual)</div><input id="simGes" type="text" placeholder="1,00" ${inp}></div>
       <div><div class="muted" style="font-size:12px;margin-bottom:4px">Comisión de éxito (% &middot; marca de agua)</div><input id="simExi" type="text" placeholder="9,00" ${inp}></div>
+      <div><div class="muted" style="font-size:12px;margin-bottom:4px">Reparto asesor — Hitch (%)</div><input id="simRep" type="text" placeholder="60" ${inp}></div>
     </div>
     <div id="simOut" style="margin-top:20px"></div>
   </div>`;
@@ -661,7 +687,7 @@ function renderSimulador(){
     return parseFloat(x)||0; };
   const calc=()=>{
     const imp=num($('simImp').value), r=num($('simRent').value)/100,
-          ges=num($('simGes').value)/100, exi=num($('simExi').value)/100;
+          ges=num($('simGes').value)/100, exi=num($('simExi').value)/100, rep=(num($('simRep').value)||60)/100;
     const gesMes=imp*ges/12, gesAnio=imp*ges, ganancia=imp*r, exiAnio=exi*Math.max(0,ganancia);
     const totAnio=gesAnio+exiAnio, neta=imp>0?(ganancia-totAnio)/imp:0;
     $('simOut').innerHTML=`<table style="width:100%"><tbody>
@@ -669,11 +695,13 @@ function renderSimulador(){
       <tr><td>Comisión de éxito <span class="muted">(sobre ganancia de ${f(ganancia)})</span></td><td class="num">—</td><td class="num"><b>${f(exiAnio)}</b> <span class="muted">/ año</span></td></tr>
       <tr class="tot"><td><b>Al mes</b></td><td class="num"><b>${f(gesMes)}</b></td><td></td></tr>
       <tr class="tot"><td><b>Al año</b> <span class="muted">(gestión + éxito)</span></td><td></td><td class="num"><b>${f(totAnio)}</b></td></tr>
+      <tr><td class="muted">Reparto &middot; Asesor (Hitch) ${(rep*100).toFixed(0)}%</td><td></td><td class="num">${f(totAnio*rep)} <span class="muted">/ año</span></td></tr>
+      <tr><td class="muted">Reparto &middot; Gesiuris ${((1-rep)*100).toFixed(0)}%</td><td></td><td class="num">${f(totAnio*(1-rep))} <span class="muted">/ año</span></td></tr>
       <tr><td class="muted">Coste total sobre patrimonio</td><td></td><td class="num muted">${imp>0?pc(totAnio/imp):'—'}</td></tr>
       <tr><td class="muted">Rentabilidad neta estimada</td><td></td><td class="num muted">${pc(neta)}</td></tr>
     </tbody></table>`;
   };
-  ['simImp','simRent','simGes','simExi'].forEach(id=>{ if($(id)) $(id).oninput=calc; });
+  ['simImp','simRent','simGes','simExi','simRep'].forEach(id=>{ if($(id)) $(id).oninput=calc; });
   calc();
 }
 
