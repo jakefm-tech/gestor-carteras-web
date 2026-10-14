@@ -59,7 +59,7 @@ async function anexar(vault, autor, tipo, payload) {
 }
 
 function reconstruir(eventos) {
-  const e = { personas: {}, instrumentos: {}, servicios: {}, svc: { clientes:{}, series:{} }, carteras: {}, titulares: {}, vl: {}, movimientos: [], planes: {}, hist: {}, rentmes: {}, conflictos: [] };
+  const e = { personas: {}, instrumentos: {}, servicios: {}, svc: { clientes:{}, series:{} }, carteras: {}, titulares: {}, vl: {}, movimientos: [], planes: {}, hist: {}, rentmes: {}, comisiones: {}, fondos: {}, perfiles: {}, conflictos: [] };
   const anuladas = new Set();
   for (const ev of eventos) {
     const p = ev.payload || {};
@@ -79,6 +79,9 @@ function reconstruir(eventos) {
       case 'plan':             e.planes[p.id] = p; break;
       case 'hist':             e.hist[p.cartera] = p; break;
       case 'rent_mes':         (e.rentmes[p.cartera] ||= {})[p.mes] = p.rent; break;
+      case 'comision':         e.comisiones[p.fondo] = { gestion: p.gestion, exito: p.exito }; break;
+      case 'fondo':            e.fondos[p.fondo] = Object.assign(e.fondos[p.fondo] || {}, p); break;
+      case 'perfil':           e.perfiles[p.perfil] = Object.assign(e.perfiles[p.perfil] || {}, p); break;
       case 'movimiento':       e.movimientos.push({ ...p, _id: ev.id, autor: ev.autor }); break;
       case 'correccion':
         if (p.anula) { if (anuladas.has(p.anula)) e.conflictos.push({ tipo: 'doble-correccion', objetivo: p.anula }); anuladas.add(p.anula); }

@@ -1,4 +1,5 @@
 const $ = (id) => document.getElementById(id);
+const FONDOS_UNIVERSO=[{"n": "GESIURIS IURISFOND FI", "g": "G", "v": "RFME", "rv": 0}, {"n": "GESIURIS PATRIMONIAL FI", "g": "G", "v": "GLOB", "rv": 5}, {"n": "GESIURIS EURO EQUITIES FI", "g": "G", "v": "RVE", "rv": 10}, {"n": "OCCIDENTE RENTA FIJA FI", "g": "T", "v": "RFE", "rv": 0}, {"n": "OCCIDENTE BOLSA ESPAÑOLA FI", "g": "T", "v": "RVE", "rv": 10}, {"n": "OCCIDENTE PATRIMONIO FI", "g": "T", "v": "GLOB", "rv": 5}, {"n": "GESIURIS BALANCED EURO FI", "g": "G", "v": "RVME", "rv": 10}, {"n": "GESIURIS FIXED INCOME FI", "g": "G", "v": "RFE", "rv": 0}, {"n": "OCCIDENTE BOLSA MUNDIAL FI", "g": "T", "v": "RVI", "rv": 10}, {"n": "ANNUALCYCLES STRATEGIES FI", "g": "T", "v": "GLOB", "rv": 5}, {"n": "BOWCAPITAL GLOBAL FUND FI", "g": "T", "v": "GLOB", "rv": 5}, {"n": "PANDA AGRICULTURE & WATER FI", "g": "T", "v": "RVI", "rv": 10}, {"n": "DEEP VALUE INTERNATIONAL FI", "g": "T", "v": "RVI", "rv": 10}, {"n": "OCCIDENTE EMERGENTES FI", "g": "T", "v": "RVI", "rv": 10}, {"n": "JAPAN DEEP VALUE FUND", "g": "T", "v": "RVI", "rv": 10}, {"n": "GESIURIS BOUTIQUE FI - I2 DESARROLLO SOSTENIBLE ISR FI", "g": "G", "v": "RFI", "rv": 0}, {"n": "MAGNUS INTERNATIONAL ALLOCATION FI", "g": "T", "v": "RVMI", "rv": 10}, {"n": "TORSAN VALUE FI", "g": "T", "v": "RVI", "rv": 10}, {"n": "GESIURIS HEALTHCARE & INNOVATION FI", "g": "G", "v": "RVI", "rv": 10}, {"n": "TRUVI VALUE FI", "g": "T", "v": "RVI", "rv": 10}, {"n": "FERMION FI", "g": "T", "v": "GLOB", "rv": 5}, {"n": "PSN MULTIESTRATEGIA FI - RENTA FIJA MIXTA INTERNACIONAL", "g": "T", "v": "RFMI", "rv": 0}, {"n": "PSN MULTIESTRATEGIA FI - RENTA VARIABLE INTERNACIONAL", "g": "T", "v": "RVI", "rv": 10}, {"n": "PSN MULTIESTRATEGIA FI - RENTA VARIABLE MIXTA INTERNACIONAL", "g": "T", "v": "RVMI", "rv": 10}, {"n": "PSN MULTIESTRATEGIA FI - INTERNACIONAL CALIDAD", "g": "T", "v": "RVI", "rv": 10}, {"n": "GESIURIS MIXTO INTERNACIONAL FI", "g": "G", "v": "RVMI", "rv": 10}, {"n": "GESIURIS MULTIGESTION FI - EMERGENTES GLOBAL", "g": "G", "v": "GLOB", "rv": 5}, {"n": "GESIURIS MULTIGESTION FI - INTERNACIONAL GLOBAL", "g": "G", "v": "GLOB", "rv": 5}, {"n": "MM GLOBAL, FI", "g": "T", "v": "GLOB", "rv": 5}, {"n": "ZENIT GESTIÓN, FI", "g": "T", "v": "GLOB", "rv": 5}, {"n": "COMPAÑIA GENERAL DE INVERSIONES SICAV", "g": "T", "v": "GLOB", "rv": 5}, {"n": "GESIURIS CAT PATRIMONIS SICAV", "g": "G", "v": "GLOB", "rv": 5}, {"n": "MAGNUS GLOBAL FLEXIBLE SICAV", "g": "T", "v": "GLOB", "rv": 5}, {"n": "QUANTICA XXII SICAV", "g": "T", "v": "GLOB", "rv": 5}, {"n": "DEMOCRATIC CAPITAL SICAV", "g": "T", "v": "GLOB", "rv": 5}, {"n": "ALGEBRA64AUREA SICAV", "g": "T", "v": "GLOB", "rv": 5}, {"n": "PARADIGMA64CHESS SICAV SA", "g": "T", "v": "GLOB", "rv": 5}, {"n": "GOOD VALUE SICAV, SA", "g": "T", "v": "GLOB", "rv": 5}, {"n": "INTELLIGENT DATA & BOTS SICAV, SA", "g": "T", "v": "GLOB", "rv": 5}, {"n": "REGATA FUND, FIL", "g": "T", "v": "GLOB", "rv": 5}, {"n": "GESIURIS ESTRATÈGIA MIXTA, FIL", "g": "G", "v": "RVMI", "rv": 10}, {"n": "GESIURIS BOUTIQUE FI - HORMA GLOBAL OPPORTUNITIES", "g": "G", "v": "GLOB", "rv": 5}, {"n": "GESIURIS MULTIGESTION FI - MV CAPITAL", "g": "G", "v": "GLOB", "rv": 5}, {"n": "PSN PERFILADOS - RENTA FIJA INTERNACIONAL", "g": "T", "v": "RFI", "rv": 0}, {"n": "PSN PERFILADOS - MIXTO INTERNACIONAL", "g": "T", "v": "RVMI", "rv": 10}, {"n": "PSN PERFILADOS - BOLSA MUNDIAL", "g": "T", "v": "RVI", "rv": 10}, {"n": "GESIURIS MULTIGESTIÓN FI - TRAIL INVEST", "g": "G", "v": "RVI", "rv": 10}, {"n": "GESIURIS MULTIGESITIÓN - CUANTITATIVA", "g": "G", "v": "GLOB", "rv": 5}, {"n": "SMILE", "g": "T", "v": "GLOB", "rv": 5}, {"n": "KOALA CAPITAL SICAV", "g": "T", "v": "GLOB", "rv": 5}];
 const eur = (n) => new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:'always'}).format(n||0)+' €';
 const pct = (n) => new Intl.NumberFormat('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1}).format((n||0)*100)+' %';
 const nom = (p) => p ? `${p.nombre||''} ${p.apellidos||''}`.trim()||'(sin nombre)' : '—';
@@ -38,6 +39,7 @@ function entrar(){
       <div class="tab" data-t="actualizar">Operaciones</div>
       <div class="tab" data-t="valores">Valores</div>
       <div class="tab" data-t="informes">Informes</div>
+      <div class="tab" data-t="propuestas">Propuestas</div>
       <div class="tab" data-t="simulador">Simulador</div>
     </div><div class="wrap" id="view"></div>`;
   document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{ TAB=t.dataset.t; pintarTabs(); recargarYrender(); });
@@ -45,7 +47,7 @@ function entrar(){
 }
 function pintarTabs(){ document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.t===TAB)); }
 async function recargarYrender(){ try{ ESTADO=Libro.reconstruir(await Libro.cargarEventos(VAULT)); }catch(e){ ESTADO=Libro.reconstruir([]); } render(); }
-function render(){ ({panel:renderPanel,analisis:renderAnalisis,clientes:renderClientes,actualizar:renderActualizar,valores:renderValores,informes:renderInformes,simulador:renderSimulador}[TAB])(); }
+function render(){ ({panel:renderPanel,analisis:renderAnalisis,clientes:renderClientes,actualizar:renderActualizar,valores:renderValores,informes:renderInformes,propuestas:renderPropuestas,simulador:renderSimulador}[TAB])(); }
 
 // ---- helpers ----
 async function apuntar(l){ for(const [t,p] of l) await Libro.anexar(VAULT,AUTOR,t,p); }
@@ -425,6 +427,218 @@ function renderValores(){
   document.querySelectorAll('[data-vl]').forEach(inp=>{ inp.oninput=()=>{ const a=parseFloat(inp.dataset.actual), v=pnum(inp.value); const cell=document.querySelector(`[data-var="${inp.dataset.vl}"]`); if(!cell)return; if(isNaN(v)||!a){ cell.textContent='—'; cell.style.color='var(--gris)'; cell.style.fontWeight='400'; return; } const d=v/a-1, big=Math.abs(d)>0.15; cell.textContent=(d>=0?'+':'')+(d*100).toFixed(1).replace('.',',')+' %'; cell.style.color=big?'#B0453B':'var(--gris)'; cell.style.fontWeight=big?'700':'400'; }; });
 }
 // ============ INFORMES ============
+function pPROP(){ return window.PROP||(window.PROP={tipo:'asset',cliTipo:'exist',cli:'',fut:'',nif:'',edad:'',importe:'',tc:{},ti:{},sel:{},mercados:'',fundam:'',vista:'flujo'}); }
+function propFondos(){ const st=ESTADO,P=pPROP(),fdb=st.fondos||{};
+  const rvDef=v=>{v=String(v||'').toUpperCase(); if(v.startsWith('RVM'))return 60; if(v.startsWith('RV'))return 100; if(v==='GLOB')return 50; if(v.startsWith('RFM'))return 20; if(v.startsWith('RF'))return 0; return 50;};
+  const extra=Object.values(fdb).filter(x=>x.custom && !FONDOS_UNIVERSO.some(u=>u.n===x.fondo)).map(x=>({n:x.fondo,g:x.g||'T',v:x.v||''}));
+  let fs=[...FONDOS_UNIVERSO,...extra].map(f=>{const d=fdb[f.n]||{};return {n:f.n,g:f.g,v:f.v,rv:d.rv!=null?d.rv:rvDef(f.v),gestion:d.gestion,exito:d.exito};});
+  if(P.tipo==='asset') fs=fs.filter(f=>f.g==='G');
+  return fs;
+}
+function catFondo(v){ v=String(v||'').toUpperCase(); if(v.includes('FIL'))return 'FIL'; if(v.startsWith('RF'))return 'RF'; return 'RV'; }
+function calcConv(){ const P=pPROP(),t=P.tc||{};
+  const p1=(+t.est||0)+(+t.econ||0)+(+t.sector||0)+(+t.crf||0)+(+t.crv||0);
+  const conv=f=>{const c=catFondo(f.v); if(c==='RF')return t.eRF||p1>=3; if(c==='RV')return t.eRV||p1>=5; return t.eFIL||p1>=7;};
+  return {p1,conv};
+}
+function calcIdon(){ const P=pPROP(),t=P.ti||{},per=ESTADO.perfiles||{};
+  const total=(+t.patr||0)+(+t.horiz||0)+(+t.obj||0)+(+t.tol||0)+(+t.exp||0)+(+t.form||0);
+  const def=[['Conservador',0,10,25],['Moderado',11,20,45],['Balanced',21,30,65],['Crecimiento',31,999,100]];
+  let perfil='—',rvmax=100;
+  for(const [n,a,b,rvm] of def){ const d=per[n]||{}; const lo=d.desde!=null?d.desde:a, hi=d.hasta!=null?d.hasta:(n==='Crecimiento'?999:b), rr=d.rvmax!=null?d.rvmax:rvm;
+    if(total>=lo && total<=hi){ perfil=n; rvmax=rr; break; } }
+  return {total,perfil,rvmax};
+}
+
+function renderPropuestas(){
+  const st=ESTADO, P=pPROP();
+  if(P.vista==='doc'){ return genPropuestaDoc(); }
+  const fdb=st.fondos||{}, per=st.perfiles||{};
+  const voc={RFME:'RF mixta euro',RFE:'RF euro',RFI:'RF internacional',RFMI:'RF mixta int.',GLOB:'Global',RVE:'RV euro',RVME:'RV mixta euro',RVMI:'RV mixta int.',RVI:'RV internacional'};
+  const personas=Object.values(st.personas).map(p=>({id:p.id,n:(p.nombre+' '+(p.apellidos||'')).trim()})).sort((a,b)=>a.n.localeCompare(b.n));
+  const sel='style="background:#fff;border-color:var(--linea)"';
+  const fs=propFondos();
+  const cv=calcConv(), id=calcIdon();
+  const disponibles=P.tipo==='asset'? fs.filter(f=>cv.conv(f)) : fs;
+  // resumen cartera
+  let sumw=0,rvp=0,gesp=0; const selArr=Object.entries(P.sel||{}).filter(([n,w])=>fs.some(f=>f.n===n)&&(+w)>0);
+  selArr.forEach(([n,w])=>{const f=fs.find(x=>x.n===n);w=+w;sumw+=w;rvp+=w*(f.rv||0);gesp+=w*(f.gestion||0);});
+  const rvPond=sumw?rvp/sumw:0, gesPond=sumw?gesp/sumw:0;
+  const aviso=(P.tipo==='wealth' && sumw>0 && rvPond>id.rvmax);
+  const nn='style="width:56px;padding:5px;border:1px solid var(--linea);border-radius:6px;background:#fff;text-align:right"';
+  const perfiles=[['Conservador',0,10,25],['Moderado',11,20,45],['Balanced',21,30,65],['Crecimiento',31,40,100]];
+  $('view').innerHTML=`<h1>Propuestas</h1>
+  <div class="card" style="max-width:820px"><h2>1 · Datos de la propuesta</h2>
+    <div class="row" style="gap:20px;flex-wrap:wrap;align-items:flex-end">
+      <label>Tipo<br><select id="pTipo" ${sel} style="margin-top:4px"><option value="asset" ${P.tipo==='asset'?'selected':''}>Asset — Gesiuris (conveniencia)</option><option value="wealth" ${P.tipo==='wealth'?'selected':''}>Wealth — idoneidad (desde 100.000 €)</option></select></label>
+      <label>Cliente<br><select id="pCliTipo" ${sel} style="margin-top:4px"><option value="exist" ${P.cliTipo==='exist'?'selected':''}>Existente</option><option value="fut" ${P.cliTipo==='fut'?'selected':''}>Futuro</option></select></label>
+      ${P.cliTipo==='exist'?`<label>Seleccionar<br><select id="pCli" ${sel} style="margin-top:4px;min-width:200px"><option value="">—</option>${personas.map(p=>`<option value="${p.id}" ${P.cli===p.id?'selected':''}>${p.n}</option>`).join('')}</select></label>`:`<label>Futuro cliente<br><input id="pFut" value="${P.fut||''}" placeholder="Nombre y apellidos" ${sel} style="margin-top:4px;min-width:200px"></label>`}
+      <label>Edad<br><input id="pEdad" value="${P.edad||''}" placeholder="años" ${sel} style="margin-top:4px;width:80px"></label>
+      ${P.tipo==='wealth'?`<label>Importe (€)<br><input id="pImp" value="${P.importe||''}" placeholder="100.000" ${sel} style="margin-top:4px;width:120px"></label>`:''}
+    </div>
+    ${P.tipo==='wealth'&&P.importe&&(pnum(String(P.importe).replace(/\./g,''))<100000)?`<p class="muted" style="margin-top:10px;color:#B0453B">Aviso: Wealth requiere un mínimo de 100.000 €.</p>`:''}
+  </div>
+
+  <div class="card" style="max-width:820px"><h2>2 · ${P.tipo==='asset'?'Test de conveniencia':'Test de idoneidad'}</h2>
+  ${P.tipo==='asset'?`
+    <div class="row" style="gap:18px;flex-wrap:wrap">
+      <label>Estudios<br><select data-tc="est" ${sel}><option value="0">Primarios / sin estudios</option><option value="1">Secundarios</option><option value="2" ${P.tc.est==2?'selected':''}>Universitarios</option></select></label>
+      <label>¿Formación en economía?<br><select data-tc="econ" ${sel}><option value="0">No</option><option value="1" ${P.tc.econ==1?'selected':''}>Sí</option></select></label>
+      <label>¿Sector financiero?<br><select data-tc="sector" ${sel}><option value="0">No</option><option value="1" ${P.tc.sector==1?'selected':''}>Sí</option></select></label>
+      <label>Conocimiento RF<br><select data-tc="crf" ${sel}><option value="0">Bajo</option><option value="1">Medio</option><option value="2">Alto</option></select></label>
+      <label>Conocimiento RV<br><select data-tc="crv" ${sel}><option value="0">Bajo</option><option value="1">Medio</option><option value="2">Alto</option></select></label>
+    </div>
+    <div class="row" style="gap:18px;margin-top:10px"><span class="muted">Experiencia previa:</span>
+      <label class="chk"><input type="checkbox" data-tc="eRF" ${P.tc.eRF?'checked':''}> Renta fija</label>
+      <label class="chk"><input type="checkbox" data-tc="eRV" ${P.tc.eRV?'checked':''}> Renta variable</label>
+      <label class="chk"><input type="checkbox" data-tc="eFIL" ${P.tc.eFIL?'checked':''}> FIL</label></div>
+    <p id="pResult" class="muted" style="margin-top:12px"></p>`
+  :`
+    <div class="row" style="gap:18px;flex-wrap:wrap">
+      <label>Patrimonio<br><select data-ti="patr" ${sel}><option value="0">&lt; 20.000 €</option><option value="1">20.000–54.000 €</option><option value="2">&gt; 54.000 €</option></select></label>
+      <label>Horizonte<br><select data-ti="horiz" ${sel}><option value="0">&lt; 6 meses</option><option value="2">6 m – 2 años</option><option value="5">2 – 5 años</option><option value="8">&gt; 5 años</option></select></label>
+      <label>Objetivo<br><select data-ti="obj" ${sel}><option value="0">Protección del capital</option><option value="2">Rent. moderada, riesgo limitado</option><option value="6">Oportunidades asumiendo riesgo</option><option value="8">Crecimiento fuerte</option></select></label>
+      <label>Tolerancia a pérdida<br><select data-ti="tol" ${sel}><option value="0">Muy baja (sin pérdida)</option><option value="2">Baja (hasta 3%)</option><option value="5">Media (hasta 10%)</option><option value="8">Elevada (&gt;10%)</option></select></label>
+      <label>Experiencia (nº productos)<br><select data-ti="exp" ${sel}><option value="0">Ninguna</option><option value="2">1–2</option><option value="4">3–4</option><option value="6">5+</option></select></label>
+      <label>Formación<br><select data-ti="form" ${sel}><option value="0">Sin formación / sin sector</option><option value="1">Universitaria o sector</option><option value="2">Universitaria y sector</option></select></label>
+    </div>
+    <p id="pResult" class="muted" style="margin-top:12px"></p>`}
+  </div>
+
+  <div class="card"><h2>3 · Cartera propuesta</h2>
+    <p class="muted" style="margin-top:-6px;margin-bottom:10px">${P.tipo==='asset'?'Fondos Gesiuris convenientes para el cliente.':'Universo Wealth (Gesiuris + terceros).'} Marca fondos y asigna peso (%).</p>
+    <table><thead><tr><th></th><th>Fondo</th><th>Vocación</th><th class="num">RV %</th><th class="num">Peso %</th></tr></thead><tbody>
+    ${disponibles.map(f=>{const w=P.sel[f.n]||'';return `<tr><td><input type="checkbox" data-selc="${f.n}" ${w?'checked':''}></td><td>${f.n}</td><td class="muted">${voc[f.v]||f.v||'—'}</td><td class="num muted">${f.rv!=null?f.rv:'—'}</td><td class="num"><input data-selw="${f.n}" value="${w?String(w).replace('.',','):''}" ${nn}></td></tr>`;}).join('')}
+    ${disponibles.length?'':'<tr><td colspan="5" class="muted">Completa el test para ver fondos convenientes.</td></tr>'}
+    </tbody></table>
+    <div id="pCartResumen" style="margin-top:12px"></div>
+  </div>
+
+  <div class="card" style="max-width:820px"><h2>4 · Situación de mercados y fundamentación</h2>
+    <p class="muted" style="margin-top:-6px;margin-bottom:10px">Redactado por el asesor. Fundamenta la propuesta según perfil de riesgo, entorno de mercado y edad del cliente.</p>
+    <div class="muted" style="font-size:12px;margin-bottom:4px">Situación de mercados</div>
+    <textarea id="pMerc" rows="4" style="width:100%;padding:8px;border:1px solid var(--linea);border-radius:8px;background:#fff" placeholder="Contexto actual de mercados…">${P.mercados||''}</textarea>
+    <div class="muted" style="font-size:12px;margin:10px 0 4px">Fundamentación de la propuesta</div>
+    <textarea id="pFund" rows="4" style="width:100%;padding:8px;border:1px solid var(--linea);border-radius:8px;background:#fff" placeholder="Por qué esta cartera para este perfil, entorno y edad…">${P.fundam||''}</textarea>
+    <div class="row" style="margin-top:14px"><button class="primary" id="bDoc">Generar documento de propuesta</button></div>
+  </div>
+
+  <div class="card" style="max-width:820px"><h2 class="muted" style="color:var(--gris)">Configuración</h2>
+    <details><summary class="muted" style="cursor:pointer">Maestro de fondos y perfiles</summary>
+    <div style="margin-top:12px"><table><thead><tr><th>Fondo</th><th>Gestora</th><th>ISIN</th><th class="num">RV %</th><th class="num">Gestión %</th><th class="num">Éxito %</th></tr></thead><tbody>
+    ${fs.map(f=>{const d=fdb[f.n]||{};return `<tr><td>${f.n}</td><td class="muted">${f.g==='G'?'Gesiuris':'Tercero'}</td><td><input data-fi="${f.n}" value="${d.isin||''}" placeholder="ES…" style="width:130px;padding:5px;border:1px solid var(--linea);border-radius:6px;background:#fff"></td><td class="num"><input data-fr="${f.n}" value="${f.rv!=null?String(f.rv).replace('.',','):''}" ${nn}></td><td class="num"><input data-fg="${f.n}" value="${d.gestion!=null?String(d.gestion).replace('.',','):''}" placeholder="—" ${nn}></td><td class="num"><input data-fx="${f.n}" value="${d.exito!=null?String(d.exito).replace('.',','):''}" placeholder="—" ${nn}></td></tr>`;}).join('')}
+    </tbody></table>
+    <div class="row" style="margin-top:10px;gap:10px;flex-wrap:wrap;align-items:center"><button class="primary" id="bFon">Guardar fondos</button>
+      <input id="nfN" placeholder="Añadir: nombre" style="width:180px;padding:5px 8px;border:1px solid var(--linea);border-radius:6px;background:#fff"><input id="nfI" placeholder="ISIN" style="width:120px;padding:5px 8px;border:1px solid var(--linea);border-radius:6px;background:#fff"><select id="nfG" ${sel}><option value="T">Tercero</option><option value="G">Gesiuris</option></select><select id="nfV" ${sel}>${Object.keys(voc).map(k=>`<option value="${k}">${voc[k]}</option>`).join('')}</select><input id="nfR" placeholder="RV%" ${nn}><button class="primary" id="bAdd">Añadir fondo</button><span class="muted" id="fonMsg"></span></div>
+    <h3 style="margin-top:18px">Perfiles de idoneidad <span class="muted" style="font-weight:400;font-size:12px">— tramos provisionales, a validar con Gesiuris</span></h3>
+    <table><thead><tr><th>Perfil</th><th class="num">Desde</th><th class="num">Hasta</th><th class="num">RV máx %</th></tr></thead><tbody>
+    ${perfiles.map(([n,a,b,rvm])=>{const d=per[n]||{};return `<tr><td>${n}</td><td class="num"><input data-pa="${n}" value="${d.desde!=null?d.desde:a}" ${nn}></td><td class="num"><input data-pb="${n}" value="${d.hasta!=null?d.hasta:b}" ${nn}></td><td class="num"><input data-pr="${n}" value="${d.rvmax!=null?d.rvmax:rvm}" ${nn}></td></tr>`;}).join('')}
+    </tbody></table>
+    <div class="row" style="margin-top:10px"><button class="primary" id="bPer">Guardar perfiles</button><span class="muted" id="perMsg"></span></div>
+    </div></details>
+  </div>`;
+
+  // --- bindings ---
+  const re=()=>renderPropuestas();
+  $('pTipo').onchange=e=>{P.tipo=e.target.value;re();};
+  $('pCliTipo').onchange=e=>{P.cliTipo=e.target.value;re();};
+  if($('pCli'))$('pCli').onchange=e=>{P.cli=e.target.value;};
+  if($('pFut'))$('pFut').oninput=e=>{P.fut=e.target.value;};
+  if($('pEdad'))$('pEdad').oninput=e=>{P.edad=e.target.value;};
+  if($('pImp'))$('pImp').oninput=e=>{P.importe=e.target.value;};
+  document.querySelectorAll('[data-tc]').forEach(el=>{const k=el.dataset.tc; el.onchange=()=>{P.tc[k]=el.type==='checkbox'?el.checked:el.value; re();};});
+  document.querySelectorAll('[data-ti]').forEach(el=>{const k=el.dataset.ti; el.onchange=()=>{P.ti[k]=el.value; re();};});
+  document.querySelectorAll('[data-selc]').forEach(el=>{const n=el.dataset.selc; el.onchange=()=>{ if(el.checked){ if(!P.sel[n])P.sel[n]=0; } else delete P.sel[n]; re(); };});
+  document.querySelectorAll('[data-selw]').forEach(el=>{const n=el.dataset.selw; el.oninput=()=>{ const v=pnum(el.value); P.sel[n]=isNaN(v)?0:v; actualizarResumenCartera(); };});
+  if($('pMerc'))$('pMerc').oninput=e=>{P.mercados=e.target.value;};
+  if($('pFund'))$('pFund').oninput=e=>{P.fundam=e.target.value;};
+  $('bDoc').onclick=()=>{ P.vista='doc'; renderPropuestas(); };
+  // resultado test
+  const pr=$('pResult');
+  if(pr){ if(P.tipo==='asset'){ pr.innerHTML=`Puntuación de conocimientos: <b>${cv.p1}</b> · Fondos convenientes: <b>${fs.filter(f=>cv.conv(f)).length}</b> de ${fs.length}.`; }
+    else { pr.innerHTML=`Puntuación total: <b>${id.total}</b> · Perfil: <b>${id.perfil}</b> · RV máx.: <b>${id.rvmax}%</b>.`; } }
+  actualizarResumenCartera();
+  // config saves
+  if($('bFon'))$('bFon').onclick=async()=>{const camb=[];const q=(a,n)=>document.querySelector('['+a+'="'+(window.CSS?CSS.escape(n):n)+'"]');
+    fs.forEach(f=>{const n=f.n,d=(st.fondos||{})[n]||{};const isin=(q('data-fi',n).value||'').trim(),rv=pnum(q('data-fr',n).value),g=pnum(q('data-fg',n).value),x=pnum(q('data-fx',n).value);
+      const nv={isin:isin||null,rv:isNaN(rv)?null:rv,gestion:isNaN(g)?null:g,exito:isNaN(x)?null:x};
+      if((d.isin||null)!==nv.isin||(d.rv==null?null:d.rv)!==nv.rv||(d.gestion==null?null:d.gestion)!==nv.gestion||(d.exito==null?null:d.exito)!==nv.exito)camb.push(['fondo',{fondo:n,...nv}]);});
+    if(camb.length){await apuntar(camb);await recargarYrender();if($('fonMsg'))$('fonMsg').textContent='Guardado.';}};
+  if($('bAdd'))$('bAdd').onclick=async()=>{const n=$('nfN').value.trim();if(!n)return;await apuntar([['fondo',{fondo:n,custom:true,g:$('nfG').value,v:$('nfV').value,isin:$('nfI').value.trim()||null,rv:isNaN(pnum($('nfR').value))?null:pnum($('nfR').value)}]]);await recargarYrender();};
+  if($('bPer'))$('bPer').onclick=async()=>{const camb=[];const q=(a,n)=>document.querySelector('['+a+'="'+(window.CSS?CSS.escape(n):n)+'"]');
+    perfiles.forEach(row=>{const n=row[0],d=(st.perfiles||{})[n]||{};const a=pnum(q('data-pa',n).value),b=pnum(q('data-pb',n).value),r=pnum(q('data-pr',n).value);
+      const nv={desde:isNaN(a)?null:a,hasta:isNaN(b)?null:b,rvmax:isNaN(r)?null:r};
+      if((d.desde==null?null:d.desde)!==nv.desde||(d.hasta==null?null:d.hasta)!==nv.hasta||(d.rvmax==null?null:d.rvmax)!==nv.rvmax)camb.push(['perfil',{perfil:n,...nv}]);});
+    if(camb.length){await apuntar(camb);await recargarYrender();if($('perMsg'))$('perMsg').textContent='Guardado.';}};
+}
+function actualizarResumenCartera(){ const P=pPROP(),st=ESTADO,fs=propFondos(),id=calcIdon();
+  let sumw=0,rvp=0,gesp=0; Object.entries(P.sel||{}).forEach(([n,w])=>{const f=fs.find(x=>x.n===n);if(!f)return;w=+w||0;sumw+=w;rvp+=w*(f.rv||0);gesp+=w*(f.gestion||0);});
+  const rvPond=sumw?rvp/sumw:0,gesPond=sumw?gesp/sumw:0;
+  const el=$('pCartResumen'); if(!el)return;
+  const avisoRV=(P.tipo==='wealth'&&sumw>0&&rvPond>id.rvmax);
+  const avisoW=(sumw>0&&Math.abs(sumw-100)>0.5);
+  el.innerHTML=`<div class="muted">Suma de pesos: <b style="color:${avisoW?'#B0453B':'inherit'}">${sumw.toFixed(1).replace('.',',')}%</b> · RV ponderada: <b>${rvPond.toFixed(0)}%</b> · Comisión gestión ponderada: <b>${gesPond.toFixed(2).replace('.',',')}%</b></div>
+  ${avisoRV?`<div style="margin-top:8px;padding:8px 12px;background:#FBEDEA;border-radius:8px;color:#B0453B">⚠ La RV ponderada (${rvPond.toFixed(0)}%) supera el límite del perfil ${id.perfil} (${id.rvmax}%). Ajusta la cartera.</div>`:''}
+  ${avisoW?`<div style="margin-top:6px" class="muted">Los pesos deberían sumar 100%.</div>`:''}`;
+}
+
+function genPropuestaDoc(){
+  const st=ESTADO, P=pPROP(), fs=propFondos();
+  const voc={RFME:'RF mixta euro',RFE:'RF euro',RFI:'RF internacional',RFMI:'RF mixta int.',GLOB:'Global',RVE:'RV euro',RVME:'RV mixta euro',RVMI:'RV mixta int.',RVI:'RV internacional'};
+  const cv=calcConv(), id=calcIdon();
+  const nombre=P.cliTipo==='exist'?(st.personas[P.cli]?((st.personas[P.cli].nombre+' '+(st.personas[P.cli].apellidos||'')).trim()):'—'):(P.fut||'—');
+  const hoy=new Date().toLocaleDateString('es-ES');
+  const selArr=Object.entries(P.sel||{}).map(([n,w])=>({f:fs.find(x=>x.n===n),w:+w||0})).filter(x=>x.f&&x.w>0);
+  let sumw=0,rvp=0,gesp=0; selArr.forEach(s=>{sumw+=s.w;rvp+=s.w*(s.f.rv||0);gesp+=s.w*(s.f.gestion||0);});
+  const rvPond=sumw?rvp/sumw:0, gesPond=sumw?gesp/sumw:0;
+  const esc=t=>String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>');
+  const regimen=P.tipo==='asset'?'conveniencia':'idoneidad (asesoramiento)';
+  $('view').innerHTML=`
+  <div class="no-print" style="margin-bottom:14px"><button id="pbVolver">← Volver</button> <button class="primary" id="pbImprimir">Imprimir / PDF</button></div>
+  <div id="pdoc" style="max-width:900px;margin:0 auto;background:#fff;border:1px solid var(--linea);border-radius:8px;padding:32px 36px">
+    <div style="border-bottom:2px solid var(--salmon-osc);padding-bottom:12px;margin-bottom:22px;display:flex;justify-content:space-between;align-items:flex-end">
+      <div><div style="font-size:13px;letter-spacing:3px;color:var(--salmon-osc);font-weight:700">HITCH CAPITAL</div>
+      <div style="font-size:24px;font-weight:700;color:var(--gris-osc);margin-top:4px">Propuesta de inversión</div></div>
+      <div class="muted" style="text-align:right;font-size:12px">${hoy}<br>Régimen de ${regimen}<br>${P.tipo==='asset'?'Asset · fondos Gesiuris':'Wealth · cartera asesorada'}</div>
+    </div>
+    <table style="width:100%;margin-bottom:22px"><tbody>
+      <tr><td class="muted" style="width:140px">Cliente</td><td><b>${esc(nombre)}</b>${P.cliTipo==='fut'?' <span class="muted">(futuro cliente)</span>':''}</td>
+      <td class="muted" style="width:90px">Edad</td><td>${P.edad?esc(P.edad)+' años':'—'}</td></tr>
+      ${P.tipo==='wealth'?`<tr><td class="muted">Importe</td><td colspan="3">${P.importe?esc(P.importe)+' €':'—'}</td></tr>`:''}
+    </tbody></table>
+
+    <h3 style="color:var(--salmon-osc);border-bottom:1px solid var(--linea);padding-bottom:4px">Perfil del cliente</h3>
+    ${P.tipo==='asset'
+      ?`<p>Evaluado mediante <b>test de conveniencia</b>. Puntuación de conocimientos y experiencia: <b>${cv.p1}</b>. La propuesta se limita a instrumentos para los que el producto resulta <b>conveniente</b> para el cliente.</p>`
+      :`<p>Evaluado mediante <b>test de idoneidad</b>. Puntuación total: <b>${id.total}</b>. Perfil de riesgo asignado: <b>${id.perfil}</b> (límite de renta variable: ${id.rvmax}%).</p>`}
+
+    <h3 style="color:var(--salmon-osc);border-bottom:1px solid var(--linea);padding-bottom:4px">Situación de mercados</h3>
+    <p>${P.mercados?esc(P.mercados):'<span class="muted">— pendiente de redactar —</span>'}</p>
+    <h3 style="color:var(--salmon-osc);border-bottom:1px solid var(--linea);padding-bottom:4px">Fundamentación de la propuesta</h3>
+    <p>${P.fundam?esc(P.fundam):'<span class="muted">— pendiente de redactar —</span>'}</p>
+
+    <h3 style="color:var(--salmon-osc);border-bottom:1px solid var(--linea);padding-bottom:4px">Cartera propuesta</h3>
+    <table style="width:100%"><thead><tr><th>Fondo</th><th>Vocación</th><th class="num">RV %</th><th class="num">Peso %</th></tr></thead><tbody>
+    ${selArr.map(s=>`<tr><td>${s.f.n}</td><td class="muted">${voc[s.f.v]||s.f.v||'—'}</td><td class="num">${s.f.rv!=null?s.f.rv:'—'}</td><td class="num">${s.w.toFixed(1).replace('.',',')}</td></tr>`).join('')||'<tr><td colspan="4" class="muted">Sin fondos seleccionados.</td></tr>'}
+    <tr class="tot"><td><b>Total</b></td><td></td><td class="num"><b>${rvPond.toFixed(0)}%</b></td><td class="num"><b>${sumw.toFixed(1).replace('.',',')}%</b></td></tr>
+    </tbody></table>
+    ${(P.tipo==='wealth'&&sumw>0&&rvPond>id.rvmax)?`<p style="color:#B0453B"><b>Nota:</b> la renta variable ponderada (${rvPond.toFixed(0)}%) supera el límite del perfil ${id.perfil} (${id.rvmax}%); requiere ajuste.</p>`:''}
+
+    <h3 style="color:var(--salmon-osc);border-bottom:1px solid var(--linea);padding-bottom:4px">Comisiones</h3>
+    ${P.tipo==='asset'
+      ?`<p>La comisión de la cartera es la media ponderada de la comisión de gestión de cada fondo por su peso: <b>${gesPond.toFixed(2).replace('.',',')}%</b> anual${gesPond===0?' <span class="muted">(completa el maestro de comisiones)</span>':''}.</p>`
+      :`<p>Cartera asesorada: comisión de gestión y, en su caso, comisión de éxito con marca de agua según la tarifa de Wealth acordada (ver simulador).</p>`}
+
+    <div style="margin-top:28px;border-top:1px solid var(--linea);padding-top:12px">
+      <div style="font-size:12px;color:var(--gris)"><b>Aviso legal.</b> Documento informativo de carácter confidencial, para uso exclusivo del cliente, elaborado en régimen de ${regimen}. Hitch Capital presta servicios de asesoramiento y no gestiona ni custodia los instrumentos; los servicios reservados los prestan entidades habilitadas. La información se basa en lo facilitado por el cliente, que no se audita. Rentabilidades pasadas no garantizan rentabilidades futuras.</div>
+      <div style="font-size:11px;color:var(--gris);margin-top:8px">HITCH GROUP PARTNERS, S.L. · CIF B42750109 · Av. Diagonal 448, Planta 4, 08006 Barcelona</div>
+      <div style="margin-top:14px">Gianni Bertran · Partner</div>
+    </div>
+  </div>`;
+  $('pbVolver').onclick=()=>{ P.vista='flujo'; renderPropuestas(); };
+  $('pbImprimir').onclick=()=>window.print();
+}
+
 function renderSimulador(){
   const inp='style="width:200px;padding:9px 11px;border:1px solid var(--linea);border-radius:8px;background:#fff;font-size:14px"';
   $('view').innerHTML=`<h1>Simulador de comisiones</h1>
