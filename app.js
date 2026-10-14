@@ -38,13 +38,14 @@ function entrar(){
       <div class="tab" data-t="actualizar">Operaciones</div>
       <div class="tab" data-t="valores">Valores</div>
       <div class="tab" data-t="informes">Informes</div>
+      <div class="tab" data-t="simulador">Simulador</div>
     </div><div class="wrap" id="view"></div>`;
   document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{ TAB=t.dataset.t; pintarTabs(); recargarYrender(); });
   pintarTabs(); recargarYrender(); window.addEventListener('focus',()=>{ const el=document.activeElement; if(el&&/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return; if(TAB==='clientes'||TAB==='actualizar') return; recargarYrender(); });
 }
 function pintarTabs(){ document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.t===TAB)); }
 async function recargarYrender(){ try{ ESTADO=Libro.reconstruir(await Libro.cargarEventos(VAULT)); }catch(e){ ESTADO=Libro.reconstruir([]); } render(); }
-function render(){ ({panel:renderPanel,analisis:renderAnalisis,clientes:renderClientes,actualizar:renderActualizar,valores:renderValores,informes:renderInformes}[TAB])(); }
+function render(){ ({panel:renderPanel,analisis:renderAnalisis,clientes:renderClientes,actualizar:renderActualizar,valores:renderValores,informes:renderInformes,simulador:renderSimulador}[TAB])(); }
 
 // ---- helpers ----
 async function apuntar(l){ for(const [t,p] of l) await Libro.anexar(VAULT,AUTOR,t,p); }
@@ -397,7 +398,7 @@ async function guardarVLs(){ const f=$('vfecha').value, m=$('vlmsg'); if(m)m.tex
   if(avisos.length && !confirm('Estos valores cambian más de un 15% respecto al anterior. ¿Seguro que son correctos?\n\n'+avisos.join('\n'))) return;
   await apuntar(ev); await recargarYrender();
   const st=ESTADO, P=finMesPrevio(f), mes=f.slice(0,7), rev=[];
-  if(P) carterasActivas(st).forEach(c=>{ const r=rentMes(st,c.cid,P,f); if(r!=null && Math.abs(r)<=0.25) rev.push(['rent_mes',{cartera:c.cid,mes,rent:Math.round(r*1e6)/1e6,fecha:f}]); });
+  if(P) carterasActivas(st).forEach(c=>{ const r=rentMes(st,c.cid,P,f); if(r!=null && Math.abs(r)<=0.15) rev.push(['rent_mes',{cartera:c.cid,mes,rent:Math.round(r*1e6)/1e6,fecha:f}]); });
   if(rev.length){ await apuntar(rev); await recargarYrender(); }
   if($('vlmsg'))$('vlmsg').textContent='Guardado. Rentabilidad del mes calculada para '+rev.length+' carteras.'; }
 
@@ -424,6 +425,44 @@ function renderValores(){
   document.querySelectorAll('[data-vl]').forEach(inp=>{ inp.oninput=()=>{ const a=parseFloat(inp.dataset.actual), v=pnum(inp.value); const cell=document.querySelector(`[data-var="${inp.dataset.vl}"]`); if(!cell)return; if(isNaN(v)||!a){ cell.textContent='—'; cell.style.color='var(--gris)'; cell.style.fontWeight='400'; return; } const d=v/a-1, big=Math.abs(d)>0.15; cell.textContent=(d>=0?'+':'')+(d*100).toFixed(1).replace('.',',')+' %'; cell.style.color=big?'#B0453B':'var(--gris)'; cell.style.fontWeight=big?'700':'400'; }; });
 }
 // ============ INFORMES ============
+function renderSimulador(){
+  const inp='style="width:200px;padding:9px 11px;border:1px solid var(--linea);border-radius:8px;background:#fff;font-size:14px"';
+  $('view').innerHTML=`<h1>Simulador de comisiones</h1>
+  <div class="card" style="max-width:600px">
+    <h2>Cartera asesorada &middot; Wealth</h2>
+    <p class="muted" style="margin-top:-6px;margin-bottom:16px">La comisión de gestión se cobra mensualmente; la comisión de éxito, con marca de agua, se cobra anualmente sobre la ganancia que supere el máximo anterior.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 18px">
+      <div><div class="muted" style="font-size:12px;margin-bottom:4px">Importe de la cartera (€)</div><input id="simImp" type="text" placeholder="1.000.000" ${inp}></div>
+      <div><div class="muted" style="font-size:12px;margin-bottom:4px">Rentabilidad anual estimada (%)</div><input id="simRent" type="text" placeholder="5,0" ${inp}></div>
+      <div><div class="muted" style="font-size:12px;margin-bottom:4px">Comisión de gestión (% anual)</div><input id="simGes" type="text" placeholder="1,00" ${inp}></div>
+      <div><div class="muted" style="font-size:12px;margin-bottom:4px">Comisión de éxito (% &middot; marca de agua)</div><input id="simExi" type="text" placeholder="9,00" ${inp}></div>
+    </div>
+    <div id="simOut" style="margin-top:20px"></div>
+  </div>`;
+  const f=n=>new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:'always'}).format(n||0)+' €';
+  const pc=n=>new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}).format((n||0)*100)+' %';
+  const num=v=>{ let x=String(v||'').trim().replace(/\s/g,''); if(!x) return 0;
+    if(x.includes(',')) x=x.replace(/\./g,'').replace(',','.');
+    else if((x.match(/\./g)||[]).length>1 || /\.\d{3}$/.test(x)) x=x.replace(/\./g,'');
+    return parseFloat(x)||0; };
+  const calc=()=>{
+    const imp=num($('simImp').value), r=num($('simRent').value)/100,
+          ges=num($('simGes').value)/100, exi=num($('simExi').value)/100;
+    const gesMes=imp*ges/12, gesAnio=imp*ges, ganancia=imp*r, exiAnio=exi*Math.max(0,ganancia);
+    const totAnio=gesAnio+exiAnio, neta=imp>0?(ganancia-totAnio)/imp:0;
+    $('simOut').innerHTML=`<table style="width:100%"><tbody>
+      <tr><td>Comisión de gestión</td><td class="num"><b>${f(gesMes)}</b> <span class="muted">/ mes</span></td><td class="num">${f(gesAnio)} <span class="muted">/ año</span></td></tr>
+      <tr><td>Comisión de éxito <span class="muted">(sobre ganancia de ${f(ganancia)})</span></td><td class="num">—</td><td class="num"><b>${f(exiAnio)}</b> <span class="muted">/ año</span></td></tr>
+      <tr class="tot"><td><b>Al mes</b></td><td class="num"><b>${f(gesMes)}</b></td><td></td></tr>
+      <tr class="tot"><td><b>Al año</b> <span class="muted">(gestión + éxito)</span></td><td></td><td class="num"><b>${f(totAnio)}</b></td></tr>
+      <tr><td class="muted">Coste total sobre patrimonio</td><td></td><td class="num muted">${imp>0?pc(totAnio/imp):'—'}</td></tr>
+      <tr><td class="muted">Rentabilidad neta estimada</td><td></td><td class="num muted">${pc(neta)}</td></tr>
+    </tbody></table>`;
+  };
+  ['simImp','simRent','simGes','simExi'].forEach(id=>{ if($(id)) $(id).oninput=calc; });
+  calc();
+}
+
 function renderInformes(){
   const st=ESTADO; const personas=Object.values(st.personas);
   if(!SELCLI && personas.length) SELCLI=personas[0].id;
@@ -465,7 +504,7 @@ function genInforme(){
   // mensual: la cartera con más meses
   let base=[], cidMain=cids[0]; cids.forEach(c=>{const m=st.hist[c]?.mensual||[]; if(m.length>base.length){base=m;cidMain=c;}});
   const rm=(st.rentmes&&st.rentmes[cidMain])||{}; let M=[];
-  for(let i=0;i<12;i++){ const mm='2026-'+String(i+1).padStart(2,'0'); if(rm[mm]!=null) M.push(rm[mm]); else if(i<base.length) M.push(base[i]); else break; }
+  for(let i=0;i<12;i++){ const mm='2026-'+String(i+1).padStart(2,'0'); if(rm[mm]!=null && Math.abs(rm[mm])<=0.15) M.push(rm[mm]); else if(i<base.length) M.push(base[i]); else break; }
   const ops=cids.flatMap(c=>st.hist[c]?.operaciones||[]);
   const last=A[A.length-1]||{};
   const desdeIni=A.reduce((a,y)=>a*(1+(y.rent||0)),1)-1;
@@ -490,9 +529,9 @@ function genInforme(){
   let det=[];
   for(const [inst,a] of Object.entries(_agg)){ if(Math.abs(a.tit)<1e-8) continue; const vl=vlUlt(st,inst); const pm=a.cT>0?a.cTP/a.cT:null; const vini=pm!=null?a.tit*pm:null; const vact=vl!=null?a.tit*vl:null; det.push({nombre:st.instrumentos[inst]?.nombre||'—',pm,vlact:vl,vini,vact,dif:(vini!=null&&vact!=null)?vact-vini:null}); }
   const _tot=det.reduce((s,r)=>s+(r.vact||0),0)||1; det.forEach(r=>r.peso=(r.vact||0)/_tot); det.sort((a,b)=>(b.vact||0)-(a.vact||0));
-  const compRows=det.map(r=>`<tr><td>${r.nombre}</td><td class="num">${r.pm!=null?t4(r.pm):'—'}</td><td class="num">${r.vlact!=null?t4(r.vlact):'—'}</td><td class="num">${r.vini!=null?e0(r.vini):'—'}</td><td class="num">${r.vact!=null?e0(r.vact):'—'}</td><td class="num ${r.dif>=0?'pos':'neg'}">${r.dif!=null?e0(r.dif):'—'}</td><td class="num ${r.dif>=0?'pos':'neg'}">${(r.vini&&r.dif!=null)?p1(r.dif/r.vini):'—'}</td><td class="num">${p1(r.peso)}</td></tr>`).join('');
-  const compTot=`<tr class="tot"><td>${L.total}</td><td></td><td></td><td class="num">${e0(det.reduce((s,r)=>s+(r.vini||0),0))}</td><td class="num">${e0(det.reduce((s,r)=>s+(r.vact||0),0))}</td><td class="num">${e0(det.reduce((s,r)=>s+(r.dif||0),0))}</td><td></td><td class="num">100,0 %</td></tr>`;
-  const compTable=`<table class="comp"><thead><tr><th>${L.activo}</th><th class="num">${L.vlc}</th><th class="num">${L.vlact}</th><th class="num">${L.vini}</th><th class="num">${L.vact}</th><th class="num">${L.dife}</th><th class="num">${L.difp}</th><th class="num">${L.peso}</th></tr></thead><tbody>${compRows}${compTot}</tbody></table>`;
+  const compRows=det.map(r=>`<tr><td>${r.nombre}</td><td class="num">${r.pm!=null?t4(r.pm):'—'}</td><td class="num">${r.vini!=null?e0(r.vini):'—'}</td><td class="num">${r.vlact!=null?t4(r.vlact):'—'}</td><td class="num">${r.vact!=null?e0(r.vact):'—'}</td><td class="num ${r.dif>=0?'pos':'neg'}">${r.dif!=null?e0(r.dif):'—'}</td><td class="num ${r.dif>=0?'pos':'neg'}">${(r.vini&&r.dif!=null)?p1(r.dif/r.vini):'—'}</td><td class="num">${p1(r.peso)}</td></tr>`).join('');
+  const compTot=`<tr class="tot"><td>${L.total}</td><td></td><td class="num">${e0(det.reduce((s,r)=>s+(r.vini||0),0))}</td><td></td><td class="num">${e0(det.reduce((s,r)=>s+(r.vact||0),0))}</td><td class="num">${e0(det.reduce((s,r)=>s+(r.dif||0),0))}</td><td></td><td class="num">100,0 %</td></tr>`;
+  const compTable=`<table class="comp"><thead><tr><th>${L.activo}</th><th class="num">${L.vlc}</th><th class="num">${L.vini}</th><th class="num">${L.vlact}</th><th class="num">${L.vact}</th><th class="num">${L.dife}</th><th class="num">${L.difp}</th><th class="num">${L.peso}</th></tr></thead><tbody>${compRows}${compTot}</tbody></table>`;
   const p1html=`<div class="page">${HT(L.cierre+' '+cierreFmt)}<div class="body">
     <div class="kpirow">${kpi('€',L.patrimonio,e0(patTotal))}${kpi('▦',L.resultado,last.res!=null?e0(last.res):'—')}${kpi('%',L.rentabilidad,last.rent!=null?p1(last.rent):'—')}${kpi('↗',L.ultmes,ultMes!=null?p1(ultMes):'—')}</div>
     <div>${secbar(L.comp,L.compcap)}<div class="panel">${compTable}</div></div>
