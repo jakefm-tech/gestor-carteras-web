@@ -28,7 +28,11 @@ async function permiso(h, pedir = false) {
   return false;
 }
 
-const subRegistros = (vault) => vault.getDirectoryHandle('registros', { create: true });
+const subRegistros = async (vault) => {
+  if (vault && vault.name && vault.name.toLowerCase() === 'registros') return vault;
+  try { for await (const h of vault.values()) { if (h.kind === 'file' && h.name.endsWith('.jsonl')) return vault; } } catch (e) {}
+  return vault.getDirectoryHandle('registros', { create: true });
+};
 
 async function cargarEventos(vault) {
   const dir = await subRegistros(vault);
