@@ -103,6 +103,8 @@ function renderPanel(){
   const wl=svc.filter(c=>c.servicio==='wealth'), gs=svc.filter(c=>c.servicio==='gestion'||c.servicio==='gdc');
   const varServ=arr=>{let p=0,pv=0;arr.forEach(c=>{if(c.var!=null){p+=(c.patrimonio||0);pv+=(c.patrimonio||0)*c.var;}});return p?pv/p:null;};
   const sum=a=>a.reduce((x,c)=>x+(c.patrimonio||0),0);
+  const liqA=assetPat-fondosArr.reduce((a,x)=>a+x.asset,0), liqW=sum(wl)-fondosArr.reduce((a,x)=>a+x.wealth,0), liqG=sum(gs)-fondosArr.reduce((a,x)=>a+x.gdc,0);
+  if(Math.abs(liqA)>1||Math.abs(liqW)>1||Math.abs(liqG)>1) fondosArr.push({n:'Liquidez',asset:liqA,wealth:liqW,gdc:liqG,total:liqA+liqW+liqG});
   let wYtd=null; const ws=series.wealth; if(ws&&ws.length>=2&&ws[0][1]) wYtd=ws[ws.length-1][1]/ws[0][1]-1;
   const filas=[
     {n:'Asset (comercialización)',pat:assetPat,cli:assetN,rent:assetRent,varm:null,fecha:'en vivo'},
