@@ -87,10 +87,11 @@ function sparkEUR(serie){
 }
 function renderPanel(){
   const st=ESTADO, act=carterasActivas(st);
-  const assetPat=act.reduce((a,c)=>a+Libro.patrimonio(st,c.cid),0), assetN=Object.keys(st.personas).length;
+  const EXCL_ASSET=new Set(['d4335f9f-0d4c-562d-9720-145355c08455']);
+  const assetPat=act.filter(c=>!EXCL_ASSET.has(c.cid)).reduce((a,c)=>a+Libro.patrimonio(st,c.cid),0), assetN=Object.keys(st.personas).length;
   const yrs={}; act.forEach(c=>(st.hist[c.cid]&&st.hist[c.cid].anual||[]).forEach(y=>{const o=yrs[y.a]||(yrs[y.a]={ini:0,res:0}); o.ini+=y.ini||0; o.res+=(y.res!=null?y.res:0); yrs[y.a]=o;}));
   const porFondo={};
-  for(const [k,t] of Object.entries(st.posiciones)){ const [cc,ii]=k.split('|'); if(Math.abs(t)<1e-6)continue; const m=st.vl[ii]||{}; const ks=Object.keys(m).sort(); const vl=ks.length?m[ks[ks.length-1]]:0; const nn2=st.instrumentos[ii]&&st.instrumentos[ii].nombre; if(!nn2)continue; (porFondo[nn2]=porFondo[nn2]||{asset:0,wealth:0,gdc:0}).asset+=t*(vl||0); }
+  for(const [k,t] of Object.entries(st.posiciones)){ const [cc,ii]=k.split('|'); if(Math.abs(t)<1e-6)continue; if(EXCL_ASSET.has(cc))continue; const m=st.vl[ii]||{}; const ks=Object.keys(m).sort(); const vl=ks.length?m[ks[ks.length-1]]:0; const nn2=st.instrumentos[ii]&&st.instrumentos[ii].nombre; if(!nn2)continue; (porFondo[nn2]=porFondo[nn2]||{asset:0,wealth:0,gdc:0}).asset+=t*(vl||0); }
   for(const v of Object.values(st.svc.fondos||{})){ const nn2=v.fondo; const o=(porFondo[nn2]=porFondo[nn2]||{asset:0,wealth:0,gdc:0}); const sv=String(v.servicio||'').toLowerCase(); if(sv.indexOf('wealth')>=0)o.wealth+=+v.importe||0; else o.gdc+=+v.importe||0; }
   const fondosArr=Object.entries(porFondo).map(([n,o])=>({n,asset:o.asset,wealth:o.wealth,gdc:o.gdc,total:o.asset+o.wealth+o.gdc})).filter(x=>Math.abs(x.total)>1).sort((a,b)=>b.total-a.total);
   const sumF=k=>fondosArr.reduce((a,x)=>a+x[k],0);
@@ -99,13 +100,14 @@ function renderPanel(){
   const volA=rentsA.length?stdev(rentsA):null, ddA=rentsA.length?maxDD(rentsA):null;
   const svc=(st.svc&&st.svc.clientes)?Object.values(st.svc.clientes):[];
   const series=(st.svc&&st.svc.series)||{};
-  const wl=svc.filter(c=>c.servicio==='wealth'), gs=svc.filter(c=>c.servicio==='gestion');
+  const wl=svc.filter(c=>c.servicio==='wealth'), gs=svc.filter(c=>c.servicio==='gestion'||c.servicio==='gdc');
+  const varServ=arr=>{let p=0,pv=0;arr.forEach(c=>{if(c.var!=null){p+=(c.patrimonio||0);pv+=(c.patrimonio||0)*c.var;}});return p?pv/p:null;};
   const sum=a=>a.reduce((x,c)=>x+(c.patrimonio||0),0);
   let wYtd=null; const ws=series.wealth; if(ws&&ws.length>=2&&ws[0][1]) wYtd=ws[ws.length-1][1]/ws[0][1]-1;
   const filas=[
-    {n:'Asset (comercialización)',pat:assetPat,cli:assetN,rent:assetRent,fecha:'en vivo'},
-    {n:'Wealth (asesoramiento)',pat:sum(wl),cli:wl.length,rent:wYtd,fecha:'ago–sep 2026'},
-    {n:'Gestión de Carteras',pat:sum(gs),cli:gs.length,rent:0.08,fecha:'11/09/2026'}
+    {n:'Asset (comercialización)',pat:assetPat,cli:assetN,rent:assetRent,varm:null,fecha:'en vivo'},
+    {n:'Wealth (asesoramiento)',pat:sum(wl),cli:wl.length,rent:wYtd,varm:varServ(wl),fecha:'30/09/2026'},
+    {n:'Gestión de Carteras',pat:sum(gs),cli:gs.length,rent:null,varm:varServ(gs),fecha:'30/09/2026'}
   ];
   const total=filas.reduce((a,f)=>a+f.pat,0)||1;
   const distinct=assetN + new Set(svc.map(c=>c.nombre)).size;
@@ -123,9 +125,9 @@ function renderPanel(){
       </div>
       <p class="muted" style="margin-top:10px;font-size:11.5px">Asset se calcula en vivo desde la app. Wealth y Gestión provienen de los seguimientos de cada cliente (última cifra disponible, ago–sep 2026). Luis Larriba figura en Wealth y Gestión: cuenta como un cliente y dos relaciones.</p></div>
     <div class="card"><h2>Patrimonio por servicio</h2>
-      <div class="cols2" style="grid-template-columns:minmax(0,1fr) 296px;align-items:center;gap:22px"><div style="overflow-x:auto"><table><thead><tr><th>Servicio</th><th class="num">Patrimonio</th><th class="num">Peso</th><th class="num">Clientes</th><th class="num">Rent. 2026</th><th class="num">Medio/cliente</th><th class="num">A fecha</th></tr></thead>
-        <tbody>${filas.map(f=>`<tr><td>${f.n}</td><td class="num">${eur(f.pat)}</td><td class="num">${pct(f.pat/total)}</td><td class="num">${f.cli}</td><td class="num">${f.rent!=null?pct(f.rent):'—'}</td><td class="num">${medio(f)}</td><td class="num" style="font-size:11px;color:var(--gris)">${f.fecha}</td></tr>`).join('')}
-        <tr class="tot"><td>Total</td><td class="num">${eur(total)}</td><td class="num">100,0 %</td><td class="num">${relaciones}</td><td></td><td></td><td></td></tr></tbody></table></div>
+      <div class="cols2" style="grid-template-columns:minmax(0,1fr) 296px;align-items:center;gap:22px"><div style="overflow-x:auto"><table><thead><tr><th>Servicio</th><th class="num">Patrimonio</th><th class="num">Peso</th><th class="num">Clientes</th><th class="num">Rent. 2026</th><th class="num">Var. mes</th><th class="num">Medio/cliente</th><th class="num">A fecha</th></tr></thead>
+        <tbody>${filas.map(f=>`<tr><td>${f.n}</td><td class="num">${eur(f.pat)}</td><td class="num">${pct(f.pat/total)}</td><td class="num">${f.cli}</td><td class="num">${f.rent!=null?pct(f.rent):'—'}</td><td class="num">${f.varm!=null?pct(f.varm):'—'}</td><td class="num">${medio(f)}</td><td class="num" style="font-size:11px;color:var(--gris)">${f.fecha}</td></tr>`).join('')}
+        <tr class="tot"><td>Total</td><td class="num">${eur(total)}</td><td class="num">100,0 %</td><td class="num">${relaciones}</td><td></td><td></td><td></td><td></td></tr></tbody></table></div>
       <div style="display:flex;justify-content:center">${donutSVG(filas.filter(f=>f.pat>0).map(f=>({n:f.n.split(' ')[0],v:f.pat})))}</div></div></div>
     <div class="card"><h2>Patrimonio por fondo / SICAV</h2>
       <p class="muted" style="margin-top:-6px;margin-bottom:8px">Importe en cada IIC por servicio. Asset desde las carteras; Wealth y Gestión de Carteras desde el detalle por fondo (se rellena al cargar el cierre).</p>
