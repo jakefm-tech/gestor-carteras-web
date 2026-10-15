@@ -343,7 +343,7 @@ function renderActualizar(){
   const st=ESTADO; const act=carterasActivas(st);
   if(!SELC && act.length) SELC=act[0].cid;
   const cart=st.carteras[SELC];
-  const insts=Object.entries(st.instrumentos).sort((a,b)=>(a[1].nombre||'').localeCompare(b[1].nombre||''));
+  const insts=Object.entries(st.instrumentos).filter(([id,i])=>i&&i.nombre).sort((a,b)=>(a[1].nombre||'').localeCompare(b[1].nombre||''));
   const pos=SELC?Object.entries(st.posiciones).filter(([k,t])=>k.split('|')[0]===SELC&&Math.abs(t)>1e-8).map(([k,t])=>{const inst=k.split('|')[1]; const vl=vlUlt(st,inst); return {inst,tit:t,vl,valor:vl?t*vl:null};}):[];
   const liq=SELC?(st.liquidez[SELC]||0):0;
   $('view').innerHTML=`<h1>Operaciones</h1>
@@ -411,7 +411,7 @@ async function guardarISIN(){
 }
 function renderValores(){
   const st=ESTADO;
-  const insts=Object.entries(st.instrumentos).sort((a,b)=>(a[1].nombre||'').localeCompare(b[1].nombre||''));
+  const insts=Object.entries(st.instrumentos).filter(([id,i])=>i&&i.nombre).sort((a,b)=>(a[1].nombre||'').localeCompare(b[1].nombre||''));
   $('view').innerHTML=`<h1>Valores liquidativos</h1>
     <div class="card"><h2>Cierre de valores liquidativos</h2>
       <p class="muted" style="margin-top:-6px;margin-bottom:10px">Solo el precio de los fondos (seguimiento mensual), no las compras y ventas de clientes. Pon la fecha de cierre una vez y rellena solo los VL que cambien.</p>
@@ -523,11 +523,11 @@ function renderPropuestas(){
   </div>
 
   <div class="card"><h2>3 · Cartera propuesta</h2>
-    <p class="muted" style="margin-top:-6px;margin-bottom:10px">Añade los fondos que compondrán la cartera y asigna su peso (%). ${P.tipo==='asset'?'Universo Gesiuris.':'Gesiuris y terceros.'}</p>
-    <table><thead><tr><th>Fondo</th><th>Vocación</th><th class="num">RV %</th><th class="num">Peso %</th><th></th></tr></thead><tbody>
-    ${Object.keys(P.sel||{}).filter(n=>fs.some(f=>f.n===n)).map(n=>{const f=fs.find(x=>x.n===n);const w=P.sel[n];return `<tr><td>${n}</td><td class="muted">${voc[f.v]||f.v||'—'}</td><td class="num muted">${f.rv!=null?f.rv:'—'}</td><td class="num"><input data-selw="${n}" value="${w?String(w).replace('.',','):''}" ${nn}></td><td class="num"><button data-selx="${n}" title="Quitar" style="border:none;background:none;color:#B0453B;cursor:pointer;font-size:16px;line-height:1">×</button></td></tr>`;}).join('')||'<tr><td colspan="5" class="muted">Aún no has añadido fondos. Usa el desplegable de abajo.</td></tr>'}
+    <p class="muted" style="margin-top:-6px;margin-bottom:10px">Añade los fondos e indica su <b>importe (€)</b>; el peso se calcula automáticamente. ${P.tipo==='asset'?'Universo Gesiuris.':'Gesiuris y terceros.'}</p>
+    <table><thead><tr><th>Fondo</th><th>Vocación</th><th class="num">RV %</th><th class="num">Importe €</th><th class="num">Peso %</th><th></th></tr></thead><tbody>
+    ${Object.keys(P.sel||{}).filter(n=>fs.some(f=>f.n===n)).map(n=>{const f=fs.find(x=>x.n===n);const imp=P.sel[n];return `<tr><td>${n}</td><td class="muted">${voc[f.v]||f.v||'—'}</td><td class="num muted">${f.rv!=null?f.rv:'—'}</td><td class="num"><input data-seli="${n}" value="${imp?new Intl.NumberFormat('es-ES').format(imp):''}" placeholder="€" style="width:120px;padding:5px 8px;border:1px solid var(--linea);border-radius:6px;background:#fff;text-align:right"></td><td class="num muted" data-peso="${n}">—</td><td class="num"><button data-selx="${n}" title="Quitar" style="border:none;background:none;color:#B0453B;cursor:pointer;font-size:16px;line-height:1">×</button></td></tr>`;}).join('')||'<tr><td colspan="6" class="muted">Aún no has añadido fondos. Usa el desplegable de abajo.</td></tr>'}
     </tbody></table>
-    <div class="row" style="margin-top:10px;gap:10px;align-items:center"><select id="wAdd" style="background:#fff;border-color:var(--linea);min-width:300px"><option value="">— Añadir fondo a la cartera —</option>${fs.filter(f=>!(P.sel&&P.sel[f.n]!=null)).map(f=>`<option value="${f.n}">${f.n}</option>`).join('')}</select><input id="wW" placeholder="peso %" ${nn}><button class="primary" id="bWAdd">Añadir</button></div>
+    <div class="row" style="margin-top:10px;gap:10px;align-items:center"><select id="wAdd" style="background:#fff;border-color:var(--linea);min-width:300px"><option value="">— Añadir fondo a la cartera —</option>${fs.filter(f=>!(P.sel&&P.sel[f.n]!=null)).map(f=>`<option value="${f.n}">${f.n}</option>`).join('')}</select><input id="wW" placeholder="importe €" style="width:120px;padding:6px 8px;border:1px solid var(--linea);border-radius:6px;background:#fff;text-align:right"><button class="primary" id="bWAdd">Añadir</button></div>
     <div id="pCartResumen" style="margin-top:12px"></div>
   </div>
 
@@ -563,9 +563,9 @@ function renderPropuestas(){
   document.querySelectorAll('[data-ti]').forEach(el=>{const k=el.dataset.ti; el.onchange=()=>{P.ti[k]=el.value; re();};});
   document.querySelectorAll('[data-tic]').forEach(el=>{const k=el.dataset.tic; el.onchange=()=>{P.ti[k]=el.checked?(+el.dataset.pts||0):0; re();};});
   document.querySelectorAll('[data-tis]').forEach(el=>{const k=el.dataset.tis; el.onchange=()=>{P.ti[k]=el.value; actualizarResumenCartera();};});
-  document.querySelectorAll('[data-selw]').forEach(el=>{const n=el.dataset.selw; el.oninput=()=>{ const v=pnum(el.value); P.sel[n]=isNaN(v)?0:v; actualizarResumenCartera(); };});
+  document.querySelectorAll('[data-seli]').forEach(el=>{const n=el.dataset.seli; el.oninput=()=>{ let x=String(el.value||'').trim().replace(/\s/g,''); if(x.includes(','))x=x.replace(/\./g,'').replace(',','.'); else if((x.match(/\./g)||[]).length>1||/\.\d{3}$/.test(x))x=x.replace(/\./g,''); const v=parseFloat(x); P.sel[n]=isNaN(v)?0:v; actualizarResumenCartera(); };});
   document.querySelectorAll('[data-selx]').forEach(el=>{el.onclick=()=>{ delete P.sel[el.dataset.selx]; re(); };});
-  if($('bWAdd'))$('bWAdd').onclick=()=>{ const n=$('wAdd').value; if(!n)return; const w=pnum($('wW').value); P.sel[n]=isNaN(w)?0:w; re(); };
+  if($('bWAdd'))$('bWAdd').onclick=()=>{ const n=$('wAdd').value; if(!n)return; let x=String($('wW').value||'').trim().replace(/\s/g,''); if(x.includes(','))x=x.replace(/\./g,'').replace(',','.'); else if((x.match(/\./g)||[]).length>1||/\.\d{3}$/.test(x))x=x.replace(/\./g,''); const w=parseFloat(x); P.sel[n]=isNaN(w)?0:w; re(); };
   if($('pMerc'))$('pMerc').oninput=e=>{P.mercados=e.target.value;};
   if($('pFund'))$('pFund').oninput=e=>{P.fundam=e.target.value;};
   $('bDoc').onclick=()=>{ P.vista='doc'; renderPropuestas(); };
@@ -581,15 +581,18 @@ function renderPropuestas(){
       if((d.desde==null?null:d.desde)!==nv.desde||(d.hasta==null?null:d.hasta)!==nv.hasta||(d.rvmax==null?null:d.rvmax)!==nv.rvmax)camb.push(['perfil',{perfil:n,...nv}]);});
     if(camb.length){await apuntar(camb);await recargarYrender();if($('perMsg'))$('perMsg').textContent='Guardado.';}};
 }
-function actualizarResumenCartera(){ const P=pPROP(),st=ESTADO,fs=propFondos(),id=calcIdon();
-  let sumw=0,rvp=0,gesp=0; Object.entries(P.sel||{}).forEach(([n,w])=>{const f=fs.find(x=>x.n===n);if(!f)return;w=+w||0;sumw+=w;rvp+=w*(f.rv||0);gesp+=w*(f.gestion||0);});
-  const rvPond=sumw?rvp/sumw:0,gesPond=sumw?gesp/sumw:0;
+function actualizarResumenCartera(){ const P=pPROP(),fs=propFondos(),idn=calcIdon();
+  const ne=v=>{let x=String(v||'').trim().replace(/\s/g,''); if(!x)return 0; if(x.includes(','))x=x.replace(/\./g,'').replace(',','.'); else if((x.match(/\./g)||[]).length>1||/\.\d{3}$/.test(x))x=x.replace(/\./g,''); return parseFloat(x)||0; };
+  const ent=Object.entries(P.sel||{}).map(([n,imp])=>{const f=fs.find(x=>x.n===n);return {n,f,imp:+imp||0};}).filter(e=>e.f);
+  let tot=0,rv=0,ges=0; ent.forEach(e=>{tot+=e.imp;rv+=e.imp*(e.f.rv||0);ges+=e.imp*(e.f.gestion||0);});
+  ent.forEach(e=>{const c=document.querySelector('[data-peso="'+(window.CSS?CSS.escape(e.n):e.n)+'"]'); if(c)c.textContent=(tot?e.imp/tot*100:0).toFixed(1).replace('.',',')+'%';});
+  const rvPond=tot?rv/tot:0,gesPond=tot?ges/tot:0;
   const el=$('pCartResumen'); if(!el)return;
-  const avisoRV=(P.tipo==='wealth'&&sumw>0&&rvPond>id.rvmax);
-  const avisoW=(sumw>0&&Math.abs(sumw-100)>0.5);
-  el.innerHTML=`<div class="muted">Suma de pesos: <b style="color:${avisoW?'#B0453B':'inherit'}">${sumw.toFixed(1).replace('.',',')}%</b> · RV ponderada: <b>${rvPond.toFixed(0)}%</b> · Comisión gestión ponderada: <b>${gesPond.toFixed(2).replace('.',',')}%</b></div>
-  ${avisoRV?`<div style="margin-top:8px;padding:8px 12px;background:#FBEDEA;border-radius:8px;color:#B0453B">⚠ La RV ponderada (${rvPond.toFixed(0)}%) supera el límite del perfil ${id.perfil} (${id.rvmax}%). Ajusta la cartera.</div>`:''}
-  ${avisoW?`<div style="margin-top:6px" class="muted">Los pesos deberían sumar 100%.</div>`:''}`;
+  const avisoRV=(P.tipo==='wealth'&&tot>0&&rvPond>idn.rvmax);
+  const fmt=n=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:0}).format(n||0)+' €';
+  el.innerHTML=`<div class="muted">Importe total: <b>${fmt(tot)}</b> · RV ponderada: <b>${rvPond.toFixed(0)}%</b> · Comisión gestión ponderada: <b>${gesPond.toFixed(2).replace('.',',')}%</b></div>
+  ${avisoRV?`<div style="margin-top:8px;padding:8px 12px;background:#FBEDEA;border-radius:8px;color:#B0453B">⚠ La RV ponderada (${rvPond.toFixed(0)}%) supera el límite del perfil ${idn.perfil} (${idn.rvmax}%). Ajusta la cartera.</div>`:''}
+  ${(P.tipo==='wealth'&&P.importe&&tot>0&&Math.abs(tot-ne(P.importe))>1)?`<div style="margin-top:6px" class="muted">El importe declarado (${fmt(ne(P.importe))}) no coincide con la suma de fondos (${fmt(tot)}).</div>`:''}`;
 }
 
 function genPropuestaDoc(){
@@ -598,9 +601,9 @@ function genPropuestaDoc(){
   const cv=calcConv(), id=calcIdon();
   const nombre=P.cliTipo==='exist'?(st.personas[P.cli]?((st.personas[P.cli].nombre+' '+(st.personas[P.cli].apellidos||'')).trim()):'—'):(P.fut||'—');
   const hoy=new Date().toLocaleDateString('es-ES');
-  const selArr=Object.entries(P.sel||{}).map(([n,w])=>({f:fs.find(x=>x.n===n),w:+w||0})).filter(x=>x.f&&x.w>0);
-  let sumw=0,rvp=0,gesp=0; selArr.forEach(s=>{sumw+=s.w;rvp+=s.w*(s.f.rv||0);gesp+=s.w*(s.f.gestion||0);});
-  const rvPond=sumw?rvp/sumw:0, gesPond=sumw?gesp/sumw:0;
+  const selArr=Object.entries(P.sel||{}).map(([n,imp])=>({f:fs.find(x=>x.n===n),imp:+imp||0})).filter(x=>x.f&&x.imp>0);
+  let tot=0,rvp=0,gesp=0; selArr.forEach(s=>{tot+=s.imp;rvp+=s.imp*(s.f.rv||0);gesp+=s.imp*(s.f.gestion||0);});
+  const rvPond=tot?rvp/tot:0, gesPond=tot?gesp/tot:0; const fmtE=n=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:0}).format(n||0)+' €';
   const esc=t=>String(t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/\n/g,'<br>');
   const regimen=P.tipo==='asset'?'conveniencia':'idoneidad (asesoramiento)';
   $('view').innerHTML=`
@@ -628,11 +631,11 @@ function genPropuestaDoc(){
     <p>${P.fundam?esc(P.fundam):'<span class="muted">— pendiente de redactar —</span>'}</p>
 
     <h3 style="color:var(--salmon-osc);border-bottom:1px solid var(--linea);padding-bottom:4px">Cartera propuesta</h3>
-    <table style="width:100%"><thead><tr><th>Fondo</th><th>Vocación</th><th class="num">RV %</th><th class="num">Peso %</th></tr></thead><tbody>
-    ${selArr.map(s=>`<tr><td>${s.f.n}</td><td class="muted">${voc[s.f.v]||s.f.v||'—'}</td><td class="num">${s.f.rv!=null?s.f.rv:'—'}</td><td class="num">${s.w.toFixed(1).replace('.',',')}</td></tr>`).join('')||'<tr><td colspan="4" class="muted">Sin fondos seleccionados.</td></tr>'}
-    <tr class="tot"><td><b>Total</b></td><td></td><td class="num"><b>${rvPond.toFixed(0)}%</b></td><td class="num"><b>${sumw.toFixed(1).replace('.',',')}%</b></td></tr>
+    <table style="width:100%"><thead><tr><th>Fondo</th><th>Vocación</th><th class="num">RV %</th><th class="num">Importe €</th><th class="num">Peso %</th></tr></thead><tbody>
+    ${selArr.map(s=>`<tr><td>${s.f.n}</td><td class="muted">${voc[s.f.v]||s.f.v||'—'}</td><td class="num">${s.f.rv!=null?s.f.rv:'—'}</td><td class="num">${fmtE(s.imp)}</td><td class="num">${tot?(s.imp/tot*100).toFixed(1).replace('.',','):'0,0'}</td></tr>`).join('')||'<tr><td colspan="5" class="muted">Sin fondos seleccionados.</td></tr>'}
+    <tr class="tot"><td><b>Total</b></td><td></td><td class="num"><b>${rvPond.toFixed(0)}%</b></td><td class="num"><b>${fmtE(tot)}</b></td><td class="num"><b>100,0%</b></td></tr>
     </tbody></table>
-    ${(P.tipo==='wealth'&&sumw>0&&rvPond>id.rvmax)?`<p style="color:#B0453B"><b>Nota:</b> la renta variable ponderada (${rvPond.toFixed(0)}%) supera el límite del perfil ${id.perfil} (${id.rvmax}%); requiere ajuste.</p>`:''}
+    ${(P.tipo==='wealth'&&tot>0&&rvPond>id.rvmax)?`<p style="color:#B0453B"><b>Nota:</b> la renta variable ponderada (${rvPond.toFixed(0)}%) supera el límite del perfil ${id.perfil} (${id.rvmax}%); requiere ajuste.</p>`:''}
 
     <h3 style="color:var(--salmon-osc);border-bottom:1px solid var(--linea);padding-bottom:4px">Comisiones</h3>
     ${P.tipo==='asset'
