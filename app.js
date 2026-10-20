@@ -43,7 +43,7 @@ function entrar(){
       <div class="tab" data-t="simulador">Simulador</div>
     </div><div class="wrap" id="view"></div>`;
   document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{ TAB=t.dataset.t; pintarTabs(); recargarYrender(); });
-  pintarTabs(); recargarYrender(); window.addEventListener('focus',()=>{ const el=document.activeElement; if(el&&/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return; if(TAB==='clientes'||TAB==='actualizar') return; recargarYrender(); });
+  pintarTabs(); recargarYrender(); window.addEventListener('focus',()=>{ const el=document.activeElement; if(el&&/^(INPUT|SELECT|TEXTAREA)$/.test(el.tagName)) return; if(TAB==='clientes'||TAB==='actualizar'||TAB==='simulador'||TAB==='propuestas') return; recargarYrender(); });
 }
 function pintarTabs(){ document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.t===TAB)); }
 async function recargarYrender(){ try{ ESTADO=Libro.reconstruir(await Libro.cargarEventos(VAULT)); }catch(e){ ESTADO=Libro.reconstruir([]); } render(); }
@@ -667,17 +667,18 @@ function genPropuestaDoc(){
 }
 
 function renderSimulador(){
+  const S=window.SIM||(window.SIM={});
   const inp='style="width:200px;padding:9px 11px;border:1px solid var(--linea);border-radius:8px;background:#fff;font-size:14px"';
   $('view').innerHTML=`<h1>Simulador de comisiones</h1>
   <div class="card" style="max-width:600px">
     <h2>Cartera asesorada &middot; Wealth</h2>
     <p class="muted" style="margin-top:-6px;margin-bottom:16px">La comisión de gestión se cobra mensualmente; la comisión de éxito, con marca de agua, se cobra anualmente sobre la ganancia que supere el máximo anterior.</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px 18px">
-      <div><div class="muted" style="font-size:12px;margin-bottom:4px">Importe de la cartera (€)</div><input id="simImp" type="text" placeholder="1.000.000" ${inp}></div>
-      <div><div class="muted" style="font-size:12px;margin-bottom:4px">Rentabilidad anual estimada (%)</div><input id="simRent" type="text" placeholder="5,0" ${inp}></div>
-      <div><div class="muted" style="font-size:12px;margin-bottom:4px">Comisión de gestión (% anual)</div><input id="simGes" type="text" placeholder="1,00" ${inp}></div>
-      <div><div class="muted" style="font-size:12px;margin-bottom:4px">Comisión de éxito (% &middot; marca de agua)</div><input id="simExi" type="text" placeholder="9,00" ${inp}></div>
-      <div><div class="muted" style="font-size:12px;margin-bottom:4px">Reparto asesor — Hitch (%)</div><input id="simRep" type="text" placeholder="60" ${inp}></div>
+      <div><div class="muted" style="font-size:12px;margin-bottom:4px">Importe de la cartera (€)</div><input id="simImp" type="text" value="${S.imp||''}" placeholder="1.000.000" ${inp}></div>
+      <div><div class="muted" style="font-size:12px;margin-bottom:4px">Rentabilidad anual estimada (%)</div><input id="simRent" type="text" value="${S.rent||''}" placeholder="5,0" ${inp}></div>
+      <div><div class="muted" style="font-size:12px;margin-bottom:4px">Comisión de gestión (% anual)</div><input id="simGes" type="text" value="${S.ges||''}" placeholder="1,00" ${inp}></div>
+      <div><div class="muted" style="font-size:12px;margin-bottom:4px">Comisión de éxito (% &middot; marca de agua)</div><input id="simExi" type="text" value="${S.exi||''}" placeholder="9,00" ${inp}></div>
+      <div><div class="muted" style="font-size:12px;margin-bottom:4px">Reparto asesor (%)</div><input id="simRep" type="text" value="${S.rep||''}" placeholder="60" ${inp}></div>
     </div>
     <div id="simOut" style="margin-top:20px"></div>
   </div>`;
@@ -697,13 +698,13 @@ function renderSimulador(){
       <tr><td>Comisión de éxito <span class="muted">(sobre ganancia de ${f(ganancia)})</span></td><td class="num">—</td><td class="num"><b>${f(exiAnio)}</b> <span class="muted">/ año</span></td></tr>
       <tr class="tot"><td><b>Al mes</b></td><td class="num"><b>${f(gesMes)}</b></td><td></td></tr>
       <tr class="tot"><td><b>Al año</b> <span class="muted">(gestión + éxito)</span></td><td></td><td class="num"><b>${f(totAnio)}</b></td></tr>
-      <tr><td class="muted">Reparto &middot; Asesor (Hitch) ${(rep*100).toFixed(0)}%</td><td></td><td class="num">${f(totAnio*rep)} <span class="muted">/ año</span></td></tr>
+      <tr><td class="muted">Reparto &middot; Asesor ${(rep*100).toFixed(0)}%</td><td></td><td class="num">${f(totAnio*rep)} <span class="muted">/ año</span></td></tr>
       <tr><td class="muted">Reparto &middot; Gesiuris ${((1-rep)*100).toFixed(0)}%</td><td></td><td class="num">${f(totAnio*(1-rep))} <span class="muted">/ año</span></td></tr>
       <tr><td class="muted">Coste total sobre patrimonio</td><td></td><td class="num muted">${imp>0?pc(totAnio/imp):'—'}</td></tr>
       <tr><td class="muted">Rentabilidad neta estimada</td><td></td><td class="num muted">${pc(neta)}</td></tr>
     </tbody></table>`;
   };
-  ['simImp','simRent','simGes','simExi','simRep'].forEach(id=>{ if($(id)) $(id).oninput=calc; });
+  ['simImp','simRent','simGes','simExi','simRep'].forEach(id=>{ if($(id)) $(id).oninput=()=>{ S.imp=$('simImp').value;S.rent=$('simRent').value;S.ges=$('simGes').value;S.exi=$('simExi').value;S.rep=$('simRep').value; calc(); }; });
   calc();
 }
 
