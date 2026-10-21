@@ -698,8 +698,8 @@ function renderSimulador(){
       <tr><td>Comisión de éxito <span class="muted">(sobre ganancia de ${f(ganancia)})</span></td><td class="num">—</td><td class="num"><b>${f(exiAnio)}</b> <span class="muted">/ año</span></td></tr>
       <tr class="tot"><td><b>Al mes</b></td><td class="num"><b>${f(gesMes)}</b></td><td></td></tr>
       <tr class="tot"><td><b>Al año</b> <span class="muted">(gestión + éxito)</span></td><td></td><td class="num"><b>${f(totAnio)}</b></td></tr>
-      <tr><td class="muted">Reparto &middot; Asesor ${(rep*100).toFixed(0)}%</td><td></td><td class="num">${f(totAnio*rep)} <span class="muted">/ año</span></td></tr>
-      <tr><td class="muted">Reparto &middot; Gesiuris ${((1-rep)*100).toFixed(0)}%</td><td></td><td class="num">${f(totAnio*(1-rep))} <span class="muted">/ año</span></td></tr>
+      <tr><td class="muted">Reparto &middot; Asesor</td><td></td><td class="num">${f(totAnio*rep)} <span class="muted">/ año</span></td></tr>
+      <tr><td class="muted">Reparto &middot; Gesiuris</td><td></td><td class="num">${f(totAnio*(1-rep))} <span class="muted">/ año</span></td></tr>
       <tr><td class="muted">Coste total sobre patrimonio</td><td></td><td class="num muted">${imp>0?pc(totAnio/imp):'—'}</td></tr>
       <tr><td class="muted">Rentabilidad neta estimada</td><td></td><td class="num muted">${pc(neta)}</td></tr>
     </tbody></table>`;
