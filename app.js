@@ -99,6 +99,8 @@ function renderPanel(){
   const rentsA=Object.keys(yrs).sort().map(a=>yrs[a].ini?yrs[a].res/yrs[a].ini:0);
   const volA=rentsA.length?stdev(rentsA):null, ddA=rentsA.length?maxDD(rentsA):null;
   const svc=(st.svc&&st.svc.clientes)?Object.values(st.svc.clientes):[];
+  const dineroNuevo=svc.reduce((a,c)=>a+(c.aportaciones>0?+c.aportaciones:0),0);
+  const retiradas=svc.reduce((a,c)=>a+(c.aportaciones<0?+c.aportaciones:0),0);
   const series=(st.svc&&st.svc.series)||{};
   const wl=svc.filter(c=>c.servicio==='wealth'), gs=svc.filter(c=>c.servicio==='gestion'||c.servicio==='gdc');
   const varServ=arr=>{let p=0,pv=0;arr.forEach(c=>{if(c.var!=null){p+=(c.patrimonio||0);pv+=(c.patrimonio||0)*c.var;}});return p?pv/p:null;};
@@ -125,7 +127,12 @@ function renderPanel(){
         <div class="mini"><div class="k">Clientes distintos</div><div class="v">${distinct}</div></div>
         <div class="mini"><div class="k">Relaciones de servicio</div><div class="v">${relaciones}</div></div>
       </div>
-      <p class="muted" style="margin-top:10px;font-size:11.5px">Asset se calcula en vivo desde la app. Wealth y Gestión provienen de los seguimientos de cada cliente (última cifra disponible, ago–sep 2026). Luis Larriba figura en Wealth y Gestión: cuenta como un cliente y dos relaciones.</p></div>
+      <div class="kpis3" style="margin-top:10px">
+        <div class="mini"><div class="k">Dinero nuevo (periodo)</div><div class="v" style="color:#1F7A4C">${dineroNuevo?'+'+eur(dineroNuevo):'—'}</div></div>
+        <div class="mini"><div class="k">Retiradas (periodo)</div><div class="v" style="color:#B0453B">${retiradas?eur(retiradas):'—'}</div></div>
+        <div class="mini"><div class="k">Flujo neto</div><div class="v">${(dineroNuevo+retiradas)?(dineroNuevo+retiradas>0?'+':'')+eur(dineroNuevo+retiradas):'—'}</div></div>
+      </div>
+      <p class="muted" style="margin-top:10px;font-size:11.5px">Asset se calcula en vivo desde la app. Wealth y Gestión provienen de los seguimientos de cada cliente (última cifra disponible, sep–oct 2026). Luis Larriba figura en Wealth y Gestión: cuenta como un cliente y dos relaciones.</p></div>
     <div class="card"><h2>Patrimonio por servicio</h2>
       <div class="cols2" style="grid-template-columns:minmax(0,1fr) 296px;align-items:center;gap:22px"><div style="overflow-x:auto"><table><thead><tr><th>Servicio</th><th class="num">Patrimonio</th><th class="num">Peso</th><th class="num">Clientes</th><th class="num">Rent. 2026</th><th class="num">Var. mes</th><th class="num">Medio/cliente</th><th class="num">A fecha</th></tr></thead>
         <tbody>${filas.map(f=>`<tr><td>${f.n}</td><td class="num">${eur(f.pat)}</td><td class="num">${pct(f.pat/total)}</td><td class="num">${f.cli}</td><td class="num">${f.rent!=null?pct(f.rent):'—'}</td><td class="num">${f.varm!=null?pct(f.varm):'—'}</td><td class="num">${medio(f)}</td><td class="num" style="font-size:11px;color:var(--gris)">${f.fecha}</td></tr>`).join('')}
