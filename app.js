@@ -8,6 +8,9 @@ const IDIOMAS = {es:'Español',ca:'Català',en:'English'};
 const TIPOS_MOV = ['Compra','Venta','Aportación','Disposición','Dividendo','Comisión'];
 
 let VAULT=null, AUTOR=localStorage.getItem('autor')||null, ESTADO=null, SEL=null, SELC=null, SELCLI=null, NUEVO=false, FILTRO='';
+const ASESORES={'AJ':'AJ (Ana y Jacobo)','Francisco Ragolta':'Paco Ragolta'};
+const ASESOR_AUTOR={jacobo:'AJ',ana:'AJ',francisco:'Francisco Ragolta'};
+const asesorActual=()=>ASESOR_AUTOR[AUTOR]||'AJ';
 
 async function boot(){
   if(!('showDirectoryPicker' in window)){ pantallaNavegador(); return; }
@@ -21,7 +24,8 @@ function pantallaConexion(hg){
       <div class="row"><button class="primary" id="bp">${hg?'Reconectar la carpeta':'Elegir carpeta…'}</button><span class="muted" id="pm"></span></div>
       <p style="margin-top:16px"><b>2.</b> ¿Quién usa este equipo?</p>
       <div class="users"><label><input type="radio" name="au" value="jacobo" ${AUTOR==='jacobo'?'checked':''}> Jacobo</label>
-        <label><input type="radio" name="au" value="ana" ${AUTOR==='ana'?'checked':''}> Ana</label></div>
+        <label><input type="radio" name="au" value="ana" ${AUTOR==='ana'?'checked':''}> Ana</label>
+        <label><input type="radio" name="au" value="francisco" ${AUTOR==='francisco'?'checked':''}> Paco Ragolta</label></div>
       <div class="row" style="margin-top:14px"><button class="primary" id="bg" disabled>Entrar</button></div></div></div></div>`;
   const rg=()=>{ $('bg').disabled=!(VAULT&&AUTOR); };
   $('bp').onclick=async()=>{ try{ if(hg){ if(await Libro.permiso(hg,true)) VAULT=hg; } else VAULT=await Libro.elegirCarpeta(); if(VAULT){$('pm').textContent='✓ conectada'; rg();} }catch(e){ $('pm').textContent='No se pudo conectar.'; } };
@@ -290,7 +294,7 @@ async function crearCliente(){
   const n=$('nfn').value.trim(); if(!n){ $('nerr').textContent='El nombre es obligatorio.'; return; }
   const pid=crypto.randomUUID();
   const l=[['alta_persona',{id:pid,nombre:n,apellidos:$('nfa').value.trim(),email:$('nfe').value.trim(),telefono:$('nft').value.trim(),idioma:$('nfi').value}]];
-  if($('nci').checked){ const cid=crypto.randomUUID(); l.push(['alta_cartera',{id:cid,nombre:'Cartera individual',tipo:'individual'}]); l.push(['titular',{cartera:cid,persona:pid}]); }
+  if($('nci').checked){ const cid=crypto.randomUUID(); l.push(['alta_cartera',{id:cid,nombre:'Cartera individual',tipo:'individual',asesor:asesorActual()}]); l.push(['titular',{cartera:cid,persona:pid}]); }
   await apuntar(l); NUEVO=false; SEL=pid; await recargarYrender();
 }
 function renderFicha(){
@@ -303,6 +307,7 @@ function renderFicha(){
     const add=noT.length?`<select data-add="${k.cid}"><option value="">+ titular…</option>${noT.map(x=>`<option value="${x.id}">${nom(x)}</option>`).join('')}</select>`:'';
     return `<div class="cartera"><div class="row"><input data-cn="${k.cid}" value="${esc(k.nombre)}" style="flex:1">
       <select data-ct="${k.cid}"><option value="individual" ${k.tipo==='individual'?'selected':''}>Individual</option><option value="conjunta" ${k.tipo==='conjunta'?'selected':''}>Conjunta</option></select>
+      <select data-casr="${k.cid}" title="Asesor">${Object.keys(ASESORES).map(a=>`<option value="${a}" ${((k.asesor||'AJ')===a)?'selected':''}>${ASESORES[a]}</option>`).join('')}</select>
       <button class="ghost" data-gc="${k.cid}">Guardar</button></div>
       <div class="chips" style="margin-top:8px">${chips}</div>${add}
       <div style="margin-top:6px"><button class="danger" data-baja="${k.cid}">Dar de baja</button>
@@ -337,12 +342,12 @@ function renderFicha(){
 }
 async function altaPersona(){ const n=$('nom').value.trim(); if(!n) return; const a=$('ape').value.trim(); const pid=crypto.randomUUID();
   const l=[['alta_persona',{id:pid,nombre:n,apellidos:a,email:'',telefono:'',idioma:'es'}]];
-  if($('ci').checked){ const cid=crypto.randomUUID(); l.push(['alta_cartera',{id:cid,nombre:'Cartera individual',tipo:'individual'}]); l.push(['titular',{cartera:cid,persona:pid}]); }
+  if($('ci').checked){ const cid=crypto.randomUUID(); l.push(['alta_cartera',{id:cid,nombre:'Cartera individual',tipo:'individual',asesor:asesorActual()}]); l.push(['titular',{cartera:cid,persona:pid}]); }
   await apuntar(l); SEL=pid; await recargarYrender(); }
 async function guardarFicha(){ await apuntar([['edit_persona',{id:SEL,nombre:$('fn').value.trim(),apellidos:$('fa').value.trim(),email:$('fe').value.trim(),telefono:$('ft').value.trim(),idioma:$('fi').value,dni:$('fdni').value.trim(),cuentaOrigen:$('fori').value.trim(),bancoDestino:$('fban').value.trim(),ibanDestino:$('fiban').value.trim()}]]); await recargarYrender(); if($('fm'))$('fm').textContent='Guardado.'; }
 async function nuevaCartera(){ const nombre=$('ncn').value.trim()||'Cartera'; const otros=[...document.querySelectorAll('.co:checked')].map(i=>i.value); const cid=crypto.randomUUID(); const tipo=otros.length?'conjunta':'individual';
-  const l=[['alta_cartera',{id:cid,nombre,tipo}],['titular',{cartera:cid,persona:SEL}]]; for(const pid of otros) l.push(['titular',{cartera:cid,persona:pid}]); await apuntar(l); await recargarYrender(); }
-async function guardarCartera(cid){ await apuntar([['edit_cartera',{id:cid,nombre:document.querySelector(`[data-cn="${cid}"]`).value.trim(),tipo:document.querySelector(`[data-ct="${cid}"]`).value}]]); await recargarYrender(); }
+  const l=[['alta_cartera',{id:cid,nombre,tipo,asesor:asesorActual()}],['titular',{cartera:cid,persona:SEL}]]; for(const pid of otros) l.push(['titular',{cartera:cid,persona:pid}]); await apuntar(l); await recargarYrender(); }
+async function guardarCartera(cid){ const asr=document.querySelector(`[data-casr="${cid}"]`); await apuntar([['edit_cartera',{id:cid,nombre:document.querySelector(`[data-cn="${cid}"]`).value.trim(),tipo:document.querySelector(`[data-ct="${cid}"]`).value,asesor:asr?asr.value:undefined}]]); await recargarYrender(); }
 async function bajaCartera(cid){ await apuntar([['edit_cartera',{id:cid,baja:true}]]); await recargarYrender(); }
 async function addTitular(cid,pid){ const st=ESTADO; const l=[['titular',{cartera:cid,persona:pid}]]; if(titularesDe(st,cid).length+1>=2&&st.carteras[cid]?.tipo==='individual') l.push(['edit_cartera',{id:cid,tipo:'conjunta'}]); await apuntar(l); await recargarYrender(); }
 async function quitaTitular(cid,pid){ const st=ESTADO; const l=[['quita_titular',{cartera:cid,persona:pid}]]; if(titularesDe(st,cid).filter(x=>x!==pid).length<=1&&st.carteras[cid]?.tipo==='conjunta') l.push(['edit_cartera',{id:cid,tipo:'individual'}]); await apuntar(l); await recargarYrender(); }
