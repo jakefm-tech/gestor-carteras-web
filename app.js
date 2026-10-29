@@ -760,8 +760,9 @@ function genInforme(){
   const A=Object.values(anualMap).sort((x,y)=>x.a-y.a).map(y=>({...y,rent:y.rents.length===1?y.rents[0]:(y.ini?y.res/y.ini:null)}));
   // mensual: la cartera con más meses
   let base=[], cidMain=cids[0]; cids.forEach(c=>{const m=st.hist[c]?.mensual||[]; if(m.length>base.length){base=m;cidMain=c;}});
-  const rm=(st.rentmes&&st.rentmes[cidMain])||{}; let M=[];
-  for(let i=0;i<12;i++){ const mm='2026-'+String(i+1).padStart(2,'0'); if(rm[mm]!=null && Math.abs(rm[mm])<=0.15) M.push(rm[mm]); else if(i<base.length) M.push(base[i]); else break; }
+  const rm=(st.rentmes&&st.rentmes[cidMain])||{}; let M=[],MLAB=[];
+  const _MES=lang==='ca'?['Gen','Feb','Març','Abr','Maig','Juny','Jul','Ago','Set','Oct','Nov','Des']:['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  for(let i=0;i<12;i++){ const mm='2026-'+String(i+1).padStart(2,'0'); let v=null; if(rm[mm]!=null && Math.abs(rm[mm])<=0.15) v=rm[mm]; else if(i<base.length && base[i]!=null) v=base[i]; if(v!=null){M.push(v);MLAB.push(_MES[i]);} }
   const ops=cids.flatMap(c=>st.hist[c]?.operaciones||[]);
   const last=A[A.length-1]||{};
   const desdeIni=A.reduce((a,y)=>a*(1+(y.rent||0)),1)-1;
@@ -798,7 +799,7 @@ function genInforme(){
   const arows=A.map(y=>`<tr><td>${y.a}</td><td class="num">${e0(y.ini)}</td><td class="num">${e0(y.fin)}</td><td class="num">${y.ap?e0(Math.abs(y.ap)):'—'}</td><td class="num">${y.re?e0(-Math.abs(y.re)):'—'}</td><td class="num">${y.res!=null?e0(y.res):'—'}</td><td class="num">${y.rent!=null?p1(y.rent):'—'}</td><td>${y.a>=2026?L.encurso:L.cerrado}</td></tr>`).join('');
   const p2html=`<div class="page">${HT(L.histanual)}<div class="body">
     <div>${secbar(L.detanual,L.detanualcap)}<div class="panel"><table class="anual"><thead><tr><th>${L.anio}</th><th class="num">${L.inicio}</th><th class="num">${L.fin}</th><th class="num">${L.aport}</th><th class="num">${L.retir}</th><th class="num">${L.resultadoe}</th><th class="num">${L.rent}</th><th>${L.estado}</th></tr></thead><tbody>${arows||'<tr><td colspan="8" class="muted">'+L.sinhist+'</td></tr>'}</tbody></table>${A.length?`<p class="riesgo">${L.vol}: <b>${p1(stdev(A.map(y=>y.rent||0)))}</b> · ${L.caida}: <b>${p1(maxDD(A.map(y=>y.rent||0)))}</b></p>`:''}</div></div>
-    <div class="cols2 grow"><div>${secbar(L.rmens)}<div class="panel">${M&&M.length?barras(MES,M):'<p class=\'muted\' style=\'padding:22px;text-align:center\'>'+L.sinmes+'</p>'}</div></div><div>${secbar(L.ranual)}<div class="panel">${barras(A.map(y=>y.a),A.map(y=>y.rent||0))}</div></div></div>
+    <div class="cols2 grow"><div>${secbar(L.rmens)}<div class="panel">${M&&M.length?barras(MLAB,M):'<p class=\'muted\' style=\'padding:22px;text-align:center\'>'+L.sinmes+'</p>'}</div></div><div>${secbar(L.ranual)}<div class="panel">${barras(A.map(y=>y.a),A.map(y=>y.rent||0))}</div></div></div>
     </div>${FT(2)}</div>`;
   const orows=ops.map(o=>`<tr><td>${o.fecha}</td><td>${o.op}</td><td>${o.inst}</td><td class="num">${o.imp!=null?new Intl.NumberFormat('es-ES',{maximumFractionDigits:0,useGrouping:'always'}).format(o.imp):''}</td><td class="num">${o.precio!=null?t4(o.precio):''}</td><td class="num">${o.tit!=null?t4(o.tit):''}</td></tr>`).join('');
   const p3html=`<div class="page">${HT(L.opsmov)}<div class="body">
