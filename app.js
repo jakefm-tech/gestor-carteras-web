@@ -792,7 +792,10 @@ function genInforme(){
   for(const m of st.movimientos){ if(!_set.has(m.cartera)||!m.instrumento) continue; const a=_agg[m.instrumento]||(_agg[m.instrumento]={tit:0,cT:0,cTP:0,cEUR:0}); a.tit+=m.titulos_delta||0; if((m.titulos_delta||0)>0){ if(m.precio){a.cT+=m.titulos_delta;a.cTP+=m.titulos_delta*m.precio;} a.cEUR += (m.coste!=null ? +m.coste : (m.precio? m.titulos_delta*m.precio/fxOf(st,m.instrumento) : 0)); } }
   let det=[];
   for(const [inst,a] of Object.entries(_agg)){ if(Math.abs(a.tit)<1e-8) continue; const vl=vlUlt(st,inst); const fx=fxOf(st,inst); const pm=a.cT>0?a.cTP/a.cT:null; const vini=a.cEUR>0?a.cEUR:null; const vact=vl!=null?a.tit*vl/fx:null; det.push({nombre:st.instrumentos[inst]?.nombre||'—',pm,vlact:vl,vini,vact,dif:(vini!=null&&vact!=null)?vact-vini:null}); }
-  const _tot=det.reduce((s,r)=>s+(r.vact||0),0)||1; det.forEach(r=>r.peso=(r.vact||0)/_tot); det.sort((a,b)=>(b.vact||0)-(a.vact||0));
+  det.sort((a,b)=>(b.vact||0)-(a.vact||0));
+  const _liq=cids.reduce((s,c)=>s+(st.liquidez[c]||0),0);
+  if(Math.abs(_liq)>0.005) det.push({nombre:'Liquidez',pm:null,vlact:null,vini:null,vact:_liq,dif:null});
+  const _tot=det.reduce((s,r)=>s+(r.vact||0),0)||1; det.forEach(r=>r.peso=(r.vact||0)/_tot);
   const compRows=det.map(r=>`<tr><td>${r.nombre}</td><td class="num">${r.pm!=null?t4(r.pm):'—'}</td><td class="num">${r.vini!=null?e0(r.vini):'—'}</td><td class="num">${r.vlact!=null?t4(r.vlact):'—'}</td><td class="num">${r.vact!=null?e0(r.vact):'—'}</td><td class="num ${r.dif>=0?'pos':'neg'}">${r.dif!=null?e0(r.dif):'—'}</td><td class="num ${r.dif>=0?'pos':'neg'}">${(r.vini&&r.dif!=null)?p1(r.dif/r.vini):'—'}</td><td class="num">${p1(r.peso)}</td></tr>`).join('');
   const compTot=`<tr class="tot"><td>${L.total}</td><td></td><td class="num">${e0(det.reduce((s,r)=>s+(r.vini||0),0))}</td><td></td><td class="num">${e0(det.reduce((s,r)=>s+(r.vact||0),0))}</td><td class="num">${e0(det.reduce((s,r)=>s+(r.dif||0),0))}</td><td></td><td class="num">100,0 %</td></tr>`;
   const compTable=`<table class="comp"><thead><tr><th>${L.activo}</th><th class="num">${L.vlc}</th><th class="num">${L.vini}</th><th class="num">${L.vlact}</th><th class="num">${L.vact}</th><th class="num">${L.dife}</th><th class="num">${L.difp}</th><th class="num">${L.peso}</th></tr></thead><tbody>${compRows}${compTot}</tbody></table>`;
