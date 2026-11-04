@@ -753,7 +753,7 @@ function genInforme(){
   const cierreISO=(()=>{let mx='';for(const _i in st.vl){for(const _k in st.vl[_i])if(_k>mx)mx=_k;}return mx||'2026-08-31';})();
   const cierreFmt=cierreISO.slice(8,10)+'/'+cierreISO.slice(5,7)+'/'+cierreISO.slice(0,4);
   if(!cids.length){ $('doc').innerHTML='<div class="page"><div class="muted">Marca al menos una cartera.</div></div>'; return; }
-  const e0=n=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:0,useGrouping:'always'}).format(Math.round(n||0))+' €';
+  const e0=n=>new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:'always'}).format(n||0)+' €';
   const p2=n=>(n>=0?'+':'')+new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}).format((n||0)*100)+' %';
   const p1=n=>new Intl.NumberFormat('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1}).format((n||0)*100)+' %';
   const t4=n=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:4}).format(n||0);
@@ -807,7 +807,7 @@ function genInforme(){
     <div>${secbar(L.detanual,L.detanualcap)}<div class="panel"><table class="anual"><thead><tr><th>${L.anio}</th><th class="num">${L.inicio}</th><th class="num">${L.fin}</th><th class="num">${L.aport}</th><th class="num">${L.retir}</th><th class="num">${L.resultadoe}</th><th class="num">${L.rent}</th><th>${L.estado}</th></tr></thead><tbody>${arows||'<tr><td colspan="8" class="muted">'+L.sinhist+'</td></tr>'}</tbody></table>${A.length?`<p class="riesgo">${L.vol}: <b>${p1(stdev(A.map(y=>y.rent||0)))}</b> · ${L.caida}: <b>${p1(maxDD(A.map(y=>y.rent||0)))}</b></p>`:''}</div></div>
     <div class="cols2 grow"><div>${secbar(L.rmens)}<div class="panel">${M&&M.length?barras(MLAB,M):'<p class=\'muted\' style=\'padding:22px;text-align:center\'>'+L.sinmes+'</p>'}</div></div><div>${secbar(L.ranual)}<div class="panel">${barras(A.map(y=>y.a),A.map(y=>y.rent||0))}</div></div></div>
     </div>${FT(2)}</div>`;
-  const orows=ops.map(o=>`<tr><td>${o.fecha}</td><td>${o.op}</td><td>${o.inst}</td><td class="num">${o.imp!=null?new Intl.NumberFormat('es-ES',{maximumFractionDigits:0,useGrouping:'always'}).format(o.imp):''}</td><td class="num">${o.precio!=null?t4(o.precio):''}</td><td class="num">${o.tit!=null?t4(o.tit):''}</td></tr>`).join('');
+  const orows=ops.map(o=>`<tr><td>${o.fecha}</td><td>${o.op}</td><td>${o.inst}</td><td class="num">${o.imp!=null?new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:'always'}).format(o.imp):''}</td><td class="num">${o.precio!=null?t4(o.precio):''}</td><td class="num">${o.tit!=null?t4(o.tit):''}</td></tr>`).join('');
   const p3html=`<div class="page">${HT(L.opsmov)}<div class="body">
     <div class="grow col">${secbar(L.opsinicio)}<div class="panel"><table class="ops ${ops.length>26?'ops-xs':ops.length>18?'ops-s':''}"><thead><tr><th>${L.fecha}</th><th>${L.operacion}</th><th>${L.instrumento}</th><th class="num">${L.importe}</th><th class="num">${L.precio}</th><th class="num">${L.titulos}</th></tr></thead><tbody>${orows||'<tr><td colspan="6" class="muted">'+L.sinops+'</td></tr>'}</tbody></table></div></div>
     <div class="cols2"><div>${secbar(L.apdisp)}<div class="panel"><div class="card2"><div class="r2"><span>${L.ap2026}</span><b>${e0(apPer)}</b></div><div class="r2"><span>${L.disp2026}</span><b>${e0(rePer)}</b></div><div class="r2"><span>${L.apini}</span><b>${e0(apInicial)}</b></div><div class="r2"><span>${L.aptot}</span><b>${e0(apTot)}</b></div><div class="r2"><span>${L.disptot}</span><b>${e0(reTot)}</b></div></div></div></div>
