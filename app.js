@@ -62,6 +62,10 @@ const vlUltF=(st,inst)=>{ const m=st.vl[inst]||{}; const f=Object.keys(m).sort()
 function finMesPrevio(iso){ const [y,m]=(iso||'').split('-').map(Number); if(!y||!m) return ''; return new Date(Date.UTC(y,m-1,0)).toISOString().slice(0,10); }
 function rentMes(st,cid,P,F){ const Vend=Libro.patrimonio(st,cid,F), Vbeg=Libro.patrimonio(st,cid,P); if(!(Vbeg>0)) return null; let flow=0; for(const mv of st.movimientos){ if(mv.cartera!==cid||!mv.fecha) continue; if(mv.fecha>P && mv.fecha<=F && (mv.tipo==='Aportación'||mv.tipo==='Disposición')) flow+=(mv.efectivo_delta||0); } const den=Vbeg+0.5*flow; if(!(den>0)) return null; return (Vend-Vbeg-flow)/den; }
 const carterasActivas=(st)=>Object.entries(st.carteras).filter(([,c])=>!c.baja).map(([cid,c])=>({cid,...c}));
+// Asesores externos: sus clientes aparecen en Clientes/Informes pero NO suman en Panel ni Análisis
+const EXT_ASESOR=new Set(['Francisco Ragolta']);
+const esExterna=(st,cid)=>EXT_ASESOR.has((st.carteras[cid]||{}).asesor);
+const carterasInternas=(st)=>carterasActivas(st).filter(c=>!esExterna(st,c.cid));
 function productos(st, cids){
   const set=new Set(cids); const prod={};
   for(const [k,tit] of Object.entries(st.posiciones)){
@@ -90,12 +94,12 @@ function sparkEUR(serie){
     +'</svg></div>';
 }
 function renderPanel(){
-  const st=ESTADO, act=carterasActivas(st);
+  const st=ESTADO, act=carterasInternas(st);
   const EXCL_ASSET=new Set(['d4335f9f-0d4c-562d-9720-145355c08455']);
-  const assetPat=act.filter(c=>!EXCL_ASSET.has(c.cid)).reduce((a,c)=>a+Libro.patrimonio(st,c.cid),0), assetN=Object.keys(st.personas).length;
+  const assetPat=act.filter(c=>!EXCL_ASSET.has(c.cid)).reduce((a,c)=>a+Libro.patrimonio(st,c.cid),0), assetN=new Set(act.flatMap(c=>titularesDe(st,c.cid))).size;
   const yrs={}; act.forEach(c=>(st.hist[c.cid]&&st.hist[c.cid].anual||[]).forEach(y=>{const o=yrs[y.a]||(yrs[y.a]={ini:0,res:0}); o.ini+=y.ini||0; o.res+=(y.res!=null?y.res:0); yrs[y.a]=o;}));
   const porFondo={};
-  for(const [k,t] of Object.entries(st.posiciones)){ const [cc,ii]=k.split('|'); if(Math.abs(t)<1e-6)continue; if(EXCL_ASSET.has(cc))continue; const m=st.vl[ii]||{}; const ks=Object.keys(m).sort(); const vl=ks.length?m[ks[ks.length-1]]:0; const nn2=st.instrumentos[ii]&&st.instrumentos[ii].nombre; if(!nn2)continue; (porFondo[nn2]=porFondo[nn2]||{asset:0,wealth:0,gdc:0}).asset+=t*(vl||0); }
+  for(const [k,t] of Object.entries(st.posiciones)){ const [cc,ii]=k.split('|'); if(Math.abs(t)<1e-6)continue; if(EXCL_ASSET.has(cc)||esExterna(st,cc))continue; const m=st.vl[ii]||{}; const ks=Object.keys(m).sort(); const vl=ks.length?m[ks[ks.length-1]]:0; const nn2=st.instrumentos[ii]&&st.instrumentos[ii].nombre; if(!nn2)continue; (porFondo[nn2]=porFondo[nn2]||{asset:0,wealth:0,gdc:0}).asset+=t*(vl||0); }
   for(const v of Object.values(st.svc.fondos||{})){ const nn2=v.fondo; const o=(porFondo[nn2]=porFondo[nn2]||{asset:0,wealth:0,gdc:0}); const sv=String(v.servicio||'').toLowerCase(); if(sv.indexOf('wealth')>=0)o.wealth+=+v.importe||0; else o.gdc+=+v.importe||0; }
   const fondosArr=Object.entries(porFondo).map(([n,o])=>({n,asset:o.asset,wealth:o.wealth,gdc:o.gdc,total:o.asset+o.wealth+o.gdc})).filter(x=>Math.abs(x.total)>1).sort((a,b)=>b.total-a.total);
   const sumF=k=>fondosArr.reduce((a,x)=>a+x[k],0);
@@ -173,7 +177,7 @@ function donutSVG(segs){const tot=segs.reduce((s,x)=>s+x.v,0)||1,r=78,C=2*Math.P
   const leg=segs.map((sg,i)=>`<div class="it"><span class="sw" style="background:${col[i%col.length]}"></span>${sg.n} <b>${pct(sg.v/tot)}</b></div>`).join('');
   return `<div class="donut"><svg viewBox="0 0 200 200" style="width:210px;flex:none">${g}</svg><div class="leg">${leg}</div></div>`;}
 function renderAnalisis(){
-  const st=ESTADO; const act=carterasActivas(st);
+  const st=ESTADO; const act=carterasInternas(st);
   const patCart=act.map(c=>({...c,pat:Libro.patrimonio(st,c.cid)}));
   const patTotal=patCart.reduce((a,c)=>a+c.pat,0)||1;
   const liqTotal=act.reduce((a,c)=>a+(st.liquidez[c.cid]||0),0);
@@ -184,7 +188,7 @@ function renderAnalisis(){
   const ranking=Object.entries(porPersona).sort((a,b)=>b[1]-a[1]);
   const topCli=ranking.slice(0,5);
   const top5pct=topCli.reduce((a,[,v])=>a+v,0)/patTotal;
-  const nClientes=Object.keys(st.personas).length;
+  const nClientes=new Set(act.flatMap(c=>titularesDe(st,c.cid))).size;
   // riesgo del conjunto desde la serie anual (agregada por año)
   const bookY={};
   act.forEach(c=>(st.hist[c.cid]?.anual||[]).forEach(y=>{const o=bookY[y.a]||(bookY[y.a]={ini:0,res:0});o.ini+=y.ini||0;o.res+=(y.res!=null?y.res:0);}));
