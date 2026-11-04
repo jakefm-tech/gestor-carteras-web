@@ -63,7 +63,7 @@ async function anexar(vault, autor, tipo, payload) {
 }
 
 function reconstruir(eventos) {
-  const e = { personas: {}, instrumentos: {}, servicios: {}, svc: { clientes:{}, series:{}, fondos:{} }, carteras: {}, titulares: {}, vl: {}, movimientos: [], planes: {}, hist: {}, rentmes: {}, comisiones: {}, fondos: {}, perfiles: {}, conflictos: [] };
+  const e = { personas: {}, instrumentos: {}, servicios: {}, svc: { clientes:{}, series:{}, fondos:{} }, carteras: {}, titulares: {}, vl: {}, fx: {}, movimientos: [], planes: {}, hist: {}, rentmes: {}, comisiones: {}, fondos: {}, perfiles: {}, conflictos: [] };
   const anuladas = new Set();
   for (const ev of eventos) {
     const p = ev.payload || {};
@@ -77,6 +77,7 @@ function reconstruir(eventos) {
       case 'svc_serie': e.svc.series[p.servicio] = p.serie; break;
       case 'svc_fondo': e.svc.fondos[p.servicio+'|'+p.fondo] = p; break;
       case 'vl':               (e.vl[p.instrumento] ||= {})[p.fecha] = p.valor; break;
+      case 'fx':               (e.fx[p.moneda] ||= {})[p.fecha] = p.valor; break;
       case 'alta_cartera':     e.carteras[p.id] = p; break;
       case 'edit_cartera':     e.carteras[p.id] = Object.assign(e.carteras[p.id] || {}, p); break;
       case 'titular':          (e.titulares[p.cartera] ||= new Set()).add(p.persona); break;
@@ -103,6 +104,15 @@ function reconstruir(eventos) {
   }
   return e;
 }
+// Tipo de cambio de una divisa a EUR: devuelve las unidades de divisa por 1 EUR
+// (p. ej. 1,1593 USD/EUR), usando el último registro a fecha; 1 si el instrumento
+// está en EUR o si no hay tipo de cambio registrado (en cuyo caso no se convierte).
+function fxA(estado, moneda, fecha) {
+  if (!moneda || moneda === 'EUR') return 1;
+  const m = (estado.fx && estado.fx[moneda]) || {};
+  const fechas = Object.keys(m).filter(f => !fecha || f <= fecha).sort();
+  return fechas.length ? m[fechas[fechas.length - 1]] : 1;
+}
 function patrimonio(estado, carteraId, fecha) {
   let vf = 0;
   for (const [k, tit] of Object.entries(estado.posiciones)) {
@@ -111,7 +121,7 @@ function patrimonio(estado, carteraId, fecha) {
     const vls = estado.vl[inst] || {};
     const fechas = Object.keys(vls).filter(f => !fecha || f <= fecha).sort();
     const ult = fechas[fechas.length - 1];
-    if (ult != null) vf += tit * vls[ult];
+    if (ult != null) vf += tit * vls[ult] / fxA(estado, (estado.instrumentos[inst] || {}).moneda, fecha);
   }
   return vf + (estado.liquidez[carteraId] || 0);
 }
@@ -132,4 +142,4 @@ async function purgar(vault, deberiaEliminar) {
   }
 }
 
-window.Libro = { VERSION_EVENTO, elegirCarpeta, permiso, leerHandle, cargarEventos, anexar, reconstruir, patrimonio, purgar };
+window.Libro = { VERSION_EVENTO, elegirCarpeta, permiso, leerHandle, cargarEventos, anexar, reconstruir, patrimonio, fxA, purgar };

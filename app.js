@@ -58,6 +58,8 @@ async function apuntar(l){ for(const [t,p] of l) await Libro.anexar(VAULT,AUTOR,
 const titularesDe=(st,cid)=>[...(st.titulares[cid]||[])];
 const cartsDe=(st,pid)=>Object.entries(st.carteras).filter(([cid,c])=>!c.baja&&titularesDe(st,cid).includes(pid)).map(([cid,c])=>({cid,...c}));
 const vlUlt=(st,inst)=>{ const m=st.vl[inst]||{}; const f=Object.keys(m).sort(); return f.length?m[f[f.length-1]]:null; };
+// Factor de divisa del instrumento (unidades de divisa por 1 EUR; 1 si cotiza en EUR). Para valorar en EUR se divide por él.
+const fxOf=(st,inst,fecha)=>Libro.fxA(st,(st.instrumentos[inst]||{}).moneda,fecha);
 const vlUltF=(st,inst)=>{ const m=st.vl[inst]||{}; const f=Object.keys(m).sort(); return f.length?[f[f.length-1],m[f[f.length-1]]]:null; };
 function finMesPrevio(iso){ const [y,m]=(iso||'').split('-').map(Number); if(!y||!m) return ''; return new Date(Date.UTC(y,m-1,0)).toISOString().slice(0,10); }
 function rentMes(st,cid,P,F){ const Vend=Libro.patrimonio(st,cid,F), Vbeg=Libro.patrimonio(st,cid,P); if(!(Vbeg>0)) return null; let flow=0; for(const mv of st.movimientos){ if(mv.cartera!==cid||!mv.fecha) continue; if(mv.fecha>P && mv.fecha<=F && (mv.tipo==='Aportación'||mv.tipo==='Disposición')) flow+=(mv.efectivo_delta||0); } const den=Vbeg+0.5*flow; if(!(den>0)) return null; return (Vend-Vbeg-flow)/den; }
@@ -71,7 +73,7 @@ function productos(st, cids){
   for(const [k,tit] of Object.entries(st.posiciones)){
     const [cid,inst]=k.split('|'); if(!set.has(cid)||Math.abs(tit)<1e-8) continue;
     const vl=vlUlt(st,inst); if(vl==null) continue;
-    prod[inst]=prod[inst]||{valor:0,n:0}; prod[inst].valor+=tit*vl; prod[inst].n++;
+    prod[inst]=prod[inst]||{valor:0,n:0}; prod[inst].valor+=tit*vl/fxOf(st,inst); prod[inst].n++;
   }
   const tot=Object.values(prod).reduce((a,b)=>a+b.valor,0)||1;
   return Object.entries(prod).sort((a,b)=>b[1].valor-a[1].valor).map(([inst,v])=>({inst,nombre:st.instrumentos[inst]?.nombre||'—',valor:v.valor,n:v.n,pct:v.valor/tot}));
@@ -99,7 +101,7 @@ function renderPanel(){
   const assetPat=act.filter(c=>!EXCL_ASSET.has(c.cid)).reduce((a,c)=>a+Libro.patrimonio(st,c.cid),0), assetN=new Set(act.flatMap(c=>titularesDe(st,c.cid))).size;
   const yrs={}; act.forEach(c=>(st.hist[c.cid]&&st.hist[c.cid].anual||[]).forEach(y=>{const o=yrs[y.a]||(yrs[y.a]={ini:0,res:0}); o.ini+=y.ini||0; o.res+=(y.res!=null?y.res:0); yrs[y.a]=o;}));
   const porFondo={};
-  for(const [k,t] of Object.entries(st.posiciones)){ const [cc,ii]=k.split('|'); if(Math.abs(t)<1e-6)continue; if(EXCL_ASSET.has(cc)||esExterna(st,cc))continue; const m=st.vl[ii]||{}; const ks=Object.keys(m).sort(); const vl=ks.length?m[ks[ks.length-1]]:0; const nn2=st.instrumentos[ii]&&st.instrumentos[ii].nombre; if(!nn2)continue; (porFondo[nn2]=porFondo[nn2]||{asset:0,wealth:0,gdc:0}).asset+=t*(vl||0); }
+  for(const [k,t] of Object.entries(st.posiciones)){ const [cc,ii]=k.split('|'); if(Math.abs(t)<1e-6)continue; if(EXCL_ASSET.has(cc)||esExterna(st,cc))continue; const m=st.vl[ii]||{}; const ks=Object.keys(m).sort(); const vl=ks.length?m[ks[ks.length-1]]:0; const nn2=st.instrumentos[ii]&&st.instrumentos[ii].nombre; if(!nn2)continue; (porFondo[nn2]=porFondo[nn2]||{asset:0,wealth:0,gdc:0}).asset+=t*(vl||0)/fxOf(st,ii); }
   for(const v of Object.values(st.svc.fondos||{})){ const nn2=v.fondo; const o=(porFondo[nn2]=porFondo[nn2]||{asset:0,wealth:0,gdc:0}); const sv=String(v.servicio||'').toLowerCase(); if(sv.indexOf('wealth')>=0)o.wealth+=+v.importe||0; else o.gdc+=+v.importe||0; }
   const fondosArr=Object.entries(porFondo).map(([n,o])=>({n,asset:o.asset,wealth:o.wealth,gdc:o.gdc,total:o.asset+o.wealth+o.gdc})).filter(x=>Math.abs(x.total)>1).sort((a,b)=>b.total-a.total);
   const sumF=k=>fondosArr.reduce((a,x)=>a+x[k],0);
@@ -374,7 +376,7 @@ function renderActualizar(){
   if(!SELC && act.length) SELC=act[0].cid;
   const cart=st.carteras[SELC];
   const insts=Object.entries(st.instrumentos).filter(([id,i])=>i&&i.nombre).sort((a,b)=>(a[1].nombre||'').localeCompare(b[1].nombre||''));
-  const pos=SELC?Object.entries(st.posiciones).filter(([k,t])=>k.split('|')[0]===SELC&&Math.abs(t)>1e-8).map(([k,t])=>{const inst=k.split('|')[1]; const vl=vlUlt(st,inst); return {inst,tit:t,vl,valor:vl?t*vl:null};}):[];
+  const pos=SELC?Object.entries(st.posiciones).filter(([k,t])=>k.split('|')[0]===SELC&&Math.abs(t)>1e-8).map(([k,t])=>{const inst=k.split('|')[1]; const vl=vlUlt(st,inst); return {inst,tit:t,vl,valor:vl?t*vl/fxOf(st,inst):null};}):[];
   const liq=SELC?(st.liquidez[SELC]||0):0;
   $('view').innerHTML=`<h1>Operaciones</h1>
     <div class="card"><div class="row"><label class="chk">Cartera
@@ -789,7 +791,7 @@ function genInforme(){
   const _set=new Set(cids), _agg={};
   for(const m of st.movimientos){ if(!_set.has(m.cartera)||!m.instrumento) continue; const a=_agg[m.instrumento]||(_agg[m.instrumento]={tit:0,cT:0,cTP:0}); a.tit+=m.titulos_delta||0; if((m.titulos_delta||0)>0&&m.precio){a.cT+=m.titulos_delta;a.cTP+=m.titulos_delta*m.precio;} }
   let det=[];
-  for(const [inst,a] of Object.entries(_agg)){ if(Math.abs(a.tit)<1e-8) continue; const vl=vlUlt(st,inst); const pm=a.cT>0?a.cTP/a.cT:null; const vini=pm!=null?a.tit*pm:null; const vact=vl!=null?a.tit*vl:null; det.push({nombre:st.instrumentos[inst]?.nombre||'—',pm,vlact:vl,vini,vact,dif:(vini!=null&&vact!=null)?vact-vini:null}); }
+  for(const [inst,a] of Object.entries(_agg)){ if(Math.abs(a.tit)<1e-8) continue; const vl=vlUlt(st,inst); const fx=fxOf(st,inst); const pm=a.cT>0?a.cTP/a.cT:null; const vini=pm!=null?a.tit*pm/fx:null; const vact=vl!=null?a.tit*vl/fx:null; det.push({nombre:st.instrumentos[inst]?.nombre||'—',pm,vlact:vl,vini,vact,dif:(vini!=null&&vact!=null)?vact-vini:null}); }
   const _tot=det.reduce((s,r)=>s+(r.vact||0),0)||1; det.forEach(r=>r.peso=(r.vact||0)/_tot); det.sort((a,b)=>(b.vact||0)-(a.vact||0));
   const compRows=det.map(r=>`<tr><td>${r.nombre}</td><td class="num">${r.pm!=null?t4(r.pm):'—'}</td><td class="num">${r.vini!=null?e0(r.vini):'—'}</td><td class="num">${r.vlact!=null?t4(r.vlact):'—'}</td><td class="num">${r.vact!=null?e0(r.vact):'—'}</td><td class="num ${r.dif>=0?'pos':'neg'}">${r.dif!=null?e0(r.dif):'—'}</td><td class="num ${r.dif>=0?'pos':'neg'}">${(r.vini&&r.dif!=null)?p1(r.dif/r.vini):'—'}</td><td class="num">${p1(r.peso)}</td></tr>`).join('');
   const compTot=`<tr class="tot"><td>${L.total}</td><td></td><td class="num">${e0(det.reduce((s,r)=>s+(r.vini||0),0))}</td><td></td><td class="num">${e0(det.reduce((s,r)=>s+(r.vact||0),0))}</td><td class="num">${e0(det.reduce((s,r)=>s+(r.dif||0),0))}</td><td></td><td class="num">100,0 %</td></tr>`;
