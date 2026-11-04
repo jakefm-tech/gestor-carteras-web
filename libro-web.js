@@ -70,7 +70,7 @@ function reconstruir(eventos) {
     switch (ev.tipo) {
       case 'alta_persona':     e.personas[p.id] = p; break;
       case 'edit_persona':     e.personas[p.id] = Object.assign(e.personas[p.id] || {}, p); break;
-      case 'alta_instrumento': e.instrumentos[p.id] = p; break;
+      case 'alta_instrumento': e.instrumentos[p.id] = Object.assign(e.instrumentos[p.id] || {}, p); break;
       case 'edit_instrumento': e.instrumentos[p.id] = Object.assign(e.instrumentos[p.id] || {}, p); break;
       case 'servicio': e.servicios[p.servicio] = Object.assign(e.servicios[p.servicio] || {}, p); break;
       case 'svc_cliente': e.svc.clientes[p.servicio+'|'+p.nombre] = p; break;
@@ -78,7 +78,7 @@ function reconstruir(eventos) {
       case 'svc_fondo': e.svc.fondos[p.servicio+'|'+p.fondo] = p; break;
       case 'vl':               (e.vl[p.instrumento] ||= {})[p.fecha] = p.valor; break;
       case 'fx':               (e.fx[p.moneda] ||= {})[p.fecha] = p.valor; break;
-      case 'alta_cartera':     e.carteras[p.id] = p; break;
+      case 'alta_cartera':     e.carteras[p.id] = Object.assign(e.carteras[p.id] || {}, p); break;
       case 'edit_cartera':     e.carteras[p.id] = Object.assign(e.carteras[p.id] || {}, p); break;
       case 'titular':          (e.titulares[p.cartera] ||= new Set()).add(p.persona); break;
       case 'quita_titular':    e.titulares[p.cartera]?.delete(p.persona); break;
