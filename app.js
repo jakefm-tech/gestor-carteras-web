@@ -109,11 +109,17 @@ function renderPanel(){
   const rentsA=Object.keys(yrs).sort().map(a=>yrs[a].ini?yrs[a].res/yrs[a].ini:0);
   const volA=rentsA.length?stdev(rentsA):null, ddA=rentsA.length?maxDD(rentsA):null;
   const svc=(st.svc&&st.svc.clientes)?Object.values(st.svc.clientes):[];
-  // Flujo del periodo también desde las carteras: aportaciones y disposiciones registradas como movimientos en 2026 (excluye asesores externos)
-  let apCart=0,reCart=0;
-  for(const m of st.movimientos){ if(esExterna(st,m.cartera)||!(m.fecha>='2026-01-01')) continue; const tp=(m.tipo||'').toLowerCase(), e=m.efectivo_delta||0; if((tp==='aportación'||tp==='aportacion')&&e>0) apCart+=e; else if((tp==='disposición'||tp==='disposicion')&&e<0) reCart+=e; }
-  const dineroNuevo=svc.reduce((a,c)=>a+(c.aportaciones>0?+c.aportaciones:0),0)+apCart;
-  const retiradas=svc.reduce((a,c)=>a+(c.aportaciones<0?+c.aportaciones:0),0)+reCart;
+  // Mes de cierre (último VL registrado), para separar flujo del año y del mes
+  let _cierre=''; for(const i in st.vl)for(const f in st.vl[i])if(f>_cierre)_cierre=f; const cierreMes=_cierre.slice(0,7);
+  // Flujo desde las carteras: aportaciones (efectivo>0) y disposiciones (efectivo<0) registradas como movimientos (excluye asesores externos)
+  let apAnioC=0,reAnioC=0,apMesC=0,reMesC=0;
+  for(const m of st.movimientos){ if(esExterna(st,m.cartera)) continue; const tp=(m.tipo||'').toLowerCase(), e=m.efectivo_delta||0, f=m.fecha||''; const esAp=(tp==='aportación'||tp==='aportacion')&&e>0, esRe=(tp==='disposición'||tp==='disposicion')&&e<0; if(!esAp&&!esRe) continue; if(f>='2026-01-01'){ if(esAp)apAnioC+=e; else reAnioC+=e; } if(f.slice(0,7)===cierreMes){ if(esAp)apMesC+=e; else reMesC+=e; } }
+  // Los servicios (Wealth/Gestión) llevan la fecha del seguimiento: se clasifican en año y mes igual que los movimientos
+  let svcApA=0,svcReA=0,svcApM=0,svcReM=0;
+  for(const c of svc){ const ap=+c.aportaciones||0; if(!ap) continue; const f=c.fecha||''; const enAnio=!f||f>='2026-01-01', enMes=f.slice(0,7)===cierreMes; if(ap>0){ if(enAnio)svcApA+=ap; if(enMes)svcApM+=ap; } else { if(enAnio)svcReA+=ap; if(enMes)svcReM+=ap; } }
+  const dineroNuevoAnio=svcApA+apAnioC, retiradasAnio=svcReA+reAnioC;
+  const dineroNuevoMes=svcApM+apMesC, retiradasMes=svcReM+reMesC;
+  const dineroNuevo=dineroNuevoAnio, retiradas=retiradasAnio;
   const series=(st.svc&&st.svc.series)||{};
   const wl=svc.filter(c=>c.servicio==='wealth'), gs=svc.filter(c=>c.servicio==='gestion'||c.servicio==='gdc');
   const varServ=arr=>{let p=0,pv=0;arr.forEach(c=>{if(c.var!=null){p+=(c.patrimonio||0);pv+=(c.patrimonio||0)*c.var;}});return p?pv/p:null;};
@@ -141,11 +147,16 @@ function renderPanel(){
         <div class="mini"><div class="k">Relaciones de servicio</div><div class="v">${relaciones}</div></div>
       </div>
       <div class="kpis3" style="margin-top:10px">
-        <div class="mini"><div class="k">Dinero nuevo (periodo)</div><div class="v" style="color:#1F7A4C">${dineroNuevo?'+'+eur(dineroNuevo):'—'}</div></div>
-        <div class="mini"><div class="k">Retiradas (periodo)</div><div class="v" style="color:#B0453B">${retiradas?eur(retiradas):'—'}</div></div>
-        <div class="mini"><div class="k">Flujo neto</div><div class="v">${(dineroNuevo+retiradas)?(dineroNuevo+retiradas>0?'+':'')+eur(dineroNuevo+retiradas):'—'}</div></div>
+        <div class="mini"><div class="k">Dinero nuevo (año)</div><div class="v" style="color:#1F7A4C">${dineroNuevoAnio?'+'+eur(dineroNuevoAnio):'—'}</div></div>
+        <div class="mini"><div class="k">Retiradas (año)</div><div class="v" style="color:#B0453B">${retiradasAnio?eur(retiradasAnio):'—'}</div></div>
+        <div class="mini"><div class="k">Flujo neto (año)</div><div class="v">${(dineroNuevoAnio+retiradasAnio)?(dineroNuevoAnio+retiradasAnio>0?'+':'')+eur(dineroNuevoAnio+retiradasAnio):'—'}</div></div>
       </div>
-      <p class="muted" style="margin-top:10px;font-size:11.5px">Asset se calcula en vivo desde la app. Wealth y Gestión provienen de los seguimientos de cada cliente (última cifra disponible, sep–oct 2026). Luis Larriba figura en Wealth y Gestión: cuenta como un cliente y dos relaciones.</p></div>
+      <div class="kpis3" style="margin-top:10px">
+        <div class="mini"><div class="k">Dinero nuevo (mes ${cierreMes||'—'})</div><div class="v" style="color:#1F7A4C">${dineroNuevoMes?'+'+eur(dineroNuevoMes):'—'}</div></div>
+        <div class="mini"><div class="k">Retiradas (mes)</div><div class="v" style="color:#B0453B">${retiradasMes?eur(retiradasMes):'—'}</div></div>
+        <div class="mini"><div class="k">Flujo neto (mes)</div><div class="v">${(dineroNuevoMes+retiradasMes)?(dineroNuevoMes+retiradasMes>0?'+':'')+eur(dineroNuevoMes+retiradasMes):'—'}</div></div>
+      </div>
+      <p class="muted" style="margin-top:10px;font-size:11.5px">Flujo del <b>año</b>: aportaciones y retiradas de 2026. Flujo del <b>mes</b>: las fechadas en el mes de cierre. Cada seguimiento y cada movimiento se clasifica por su fecha. Asset se calcula en vivo desde la app.</p></div>
     <div class="card"><h2>Patrimonio por servicio</h2>
       <div class="cols2" style="grid-template-columns:minmax(0,1fr) 296px;align-items:center;gap:22px"><div style="overflow-x:auto"><table><thead><tr><th>Servicio</th><th class="num">Patrimonio</th><th class="num">Peso</th><th class="num">Clientes</th><th class="num">Rent. 2026</th><th class="num">Var. mes</th><th class="num">Medio/cliente</th><th class="num">A fecha</th></tr></thead>
         <tbody>${filas.map(f=>`<tr><td>${f.n}</td><td class="num">${eur(f.pat)}</td><td class="num">${pct(f.pat/total)}</td><td class="num">${f.cli}</td><td class="num">${f.rent!=null?pct(f.rent):'—'}</td><td class="num">${f.varm!=null?pct(f.varm):'—'}</td><td class="num">${medio(f)}</td><td class="num" style="font-size:11px;color:var(--gris)">${f.fecha}</td></tr>`).join('')}
