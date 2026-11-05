@@ -117,9 +117,16 @@ select{padding:7px 9px;border:1px solid var(--amarillo-b);border-radius:7px;font
   #view>h1,#view>.card{display:none!important}
   .wrap{padding:0!important;margin:0!important;max-width:none!important}
   #doc{align-items:stretch!important}
-  #doc .page{width:297mm!important;height:210mm!important;max-height:210mm!important;padding:6mm!important;box-sizing:border-box!important;
-    margin:0!important;border:none!important;box-shadow:none!important;overflow:hidden!important;
+  #doc .page{width:297mm!important;height:210mm!important;max-height:210mm!important;padding:7mm 8mm 12mm!important;box-sizing:border-box!important;
+    margin:0 auto!important;border:none!important;box-shadow:none!important;overflow:hidden!important;position:relative!important;
     page-break-inside:avoid;break-inside:avoid}
+  #doc .kpirow{margin:7px 0!important}
+  #doc .kpi{padding:8px 12px!important}
+  #doc table.comp tbody td,#doc table.comp thead th{padding:4.5px 10px!important}
+  #doc table.anual tbody td,#doc table.anual thead th{padding:5px 9px!important}
+  #doc .secbar{margin-top:4px!important}
+  #doc .panel{padding:5px 12px!important}
+  #doc .body{padding-bottom:5mm!important}
   #doc .page+.page{page-break-before:always;break-before:page}
   #doc .page:last-child{page-break-after:auto;break-after:auto}
   #doc .secbar{page-break-after:avoid;break-after:avoid}
@@ -136,7 +143,7 @@ select{padding:7px 9px;border:1px solid var(--amarillo-b);border-radius:7px;font
   #doc table.ops-xs tbody td{padding:1.3px 6px;line-height:1.15}
   #doc .aviso2{font-size:9px}
   #doc .card2 .r2{padding:4px 0;font-size:10px}
-  #doc .foot2{font-size:9px}
+  #doc .foot2{font-size:9px;position:absolute!important;left:8mm!important;right:8mm!important;bottom:5mm!important;margin:0!important;background:#fff!important;padding-top:5px!important}
 }
 
 /* Restaurar estilos de app perdidos al reescribir el CSS del informe */
