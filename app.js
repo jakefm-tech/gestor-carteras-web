@@ -109,8 +109,11 @@ function renderPanel(){
   const rentsA=Object.keys(yrs).sort().map(a=>yrs[a].ini?yrs[a].res/yrs[a].ini:0);
   const volA=rentsA.length?stdev(rentsA):null, ddA=rentsA.length?maxDD(rentsA):null;
   const svc=(st.svc&&st.svc.clientes)?Object.values(st.svc.clientes):[];
-  const dineroNuevo=svc.reduce((a,c)=>a+(c.aportaciones>0?+c.aportaciones:0),0);
-  const retiradas=svc.reduce((a,c)=>a+(c.aportaciones<0?+c.aportaciones:0),0);
+  // Flujo del periodo también desde las carteras: aportaciones y disposiciones registradas como movimientos en 2026 (excluye asesores externos)
+  let apCart=0,reCart=0;
+  for(const m of st.movimientos){ if(esExterna(st,m.cartera)||!(m.fecha>='2026-01-01')) continue; const tp=(m.tipo||'').toLowerCase(), e=m.efectivo_delta||0; if((tp==='aportación'||tp==='aportacion')&&e>0) apCart+=e; else if((tp==='disposición'||tp==='disposicion')&&e<0) reCart+=e; }
+  const dineroNuevo=svc.reduce((a,c)=>a+(c.aportaciones>0?+c.aportaciones:0),0)+apCart;
+  const retiradas=svc.reduce((a,c)=>a+(c.aportaciones<0?+c.aportaciones:0),0)+reCart;
   const series=(st.svc&&st.svc.series)||{};
   const wl=svc.filter(c=>c.servicio==='wealth'), gs=svc.filter(c=>c.servicio==='gestion'||c.servicio==='gdc');
   const varServ=arr=>{let p=0,pv=0;arr.forEach(c=>{if(c.var!=null){p+=(c.patrimonio||0);pv+=(c.patrimonio||0)*c.var;}});return p?pv/p:null;};
