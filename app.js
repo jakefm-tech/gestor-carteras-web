@@ -813,24 +813,30 @@ function genInforme(){
   const compRows=det.map(r=>`<tr><td>${r.nombre}</td><td class="num">${r.pm!=null?t4(r.pm):'—'}</td><td class="num">${r.vini!=null?e0(r.vini):'—'}</td><td class="num">${r.vlact!=null?t4(r.vlact):'—'}</td><td class="num">${r.vact!=null?e0(r.vact):'—'}</td><td class="num ${r.dif>=0?'pos':'neg'}">${r.dif!=null?e0(r.dif):'—'}</td><td class="num ${r.dif>=0?'pos':'neg'}">${(r.vini&&r.dif!=null)?p1(r.dif/r.vini):'—'}</td><td class="num">${p1(r.peso)}</td></tr>`).join('');
   const compTot=`<tr class="tot"><td>${L.total}</td><td></td><td class="num">${e0(det.reduce((s,r)=>s+(r.vini||0),0))}</td><td></td><td class="num">${e0(det.reduce((s,r)=>s+(r.vact||0),0))}</td><td class="num">${e0(det.reduce((s,r)=>s+(r.dif||0),0))}</td><td></td><td class="num">100,0 %</td></tr>`;
   const compTable=`<table class="comp"><thead><tr><th>${L.activo}</th><th class="num">${L.vlc}</th><th class="num">${L.vini}</th><th class="num">${L.vlact}</th><th class="num">${L.vact}</th><th class="num">${L.dife}</th><th class="num">${L.difp}</th><th class="num">${L.peso}</th></tr></thead><tbody>${compRows}${compTot}</tbody></table>`;
-  const p1html=`<div class="page">${HT(L.cierre+' '+cierreFmt)}<div class="body">
-    <div class="kpirow">${kpi('€',L.patrimonio,e0(patTotal))}${kpi('▦',L.resultado,last.res!=null?e0(last.res):'—')}${kpi('%',L.rentabilidad,last.rent!=null?p1(last.rent):'—')}${kpi('↗',L.ultmes,ultMes!=null?p1(ultMes):'—')}</div>
+  // ---- Cuerpos de página (el marco .page y el pie numerado se añaden al ensamblar) ----
+  const bodyP1=`<div class="kpirow">${kpi('€',L.patrimonio,e0(patTotal))}${kpi('▦',L.resultado,last.res!=null?e0(last.res):'—')}${kpi('%',L.rentabilidad,last.rent!=null?p1(last.rent):'—')}${kpi('↗',L.ultmes,ultMes!=null?p1(ultMes):'—')}</div>
     <div>${secbar(L.comp,L.compcap)}<div class="panel">${compTable}</div></div>
     <div class="cols2 grow"><div>${secbar(L.distrib,L.distribcap)}<div class="panel pc">${donut(det.map(r=>({n:r.nombre,v:r.vact||0})))}</div></div>
-      <div>${secbar(L.evol,L.evolcap)}<div class="panel">${M&&M.length?linea(M):'<p class=\'muted\' style=\'padding:22px;text-align:center\'>'+L.sinmes+'</p>'}</div></div></div>
-    </div>${FT(1)}</div>`;
+      <div>${secbar(L.evol,L.evolcap)}<div class="panel">${M&&M.length?linea(M):'<p class=\'muted\' style=\'padding:22px;text-align:center\'>'+L.sinmes+'</p>'}</div></div></div>`;
   const arows=A.map(y=>`<tr><td>${y.a}</td><td class="num">${e0(y.ini)}</td><td class="num">${e0(y.fin)}</td><td class="num">${y.ap?e0(Math.abs(y.ap)):'—'}</td><td class="num">${y.re?e0(-Math.abs(y.re)):'—'}</td><td class="num">${y.res!=null?e0(y.res):'—'}</td><td class="num">${y.rent!=null?p1(y.rent):'—'}</td><td>${y.a>=2026?L.encurso:L.cerrado}</td></tr>`).join('');
-  const p2html=`<div class="page">${HT(L.histanual)}<div class="body">
-    <div>${secbar(L.detanual,L.detanualcap)}<div class="panel"><table class="anual"><thead><tr><th>${L.anio}</th><th class="num">${L.inicio}</th><th class="num">${L.fin}</th><th class="num">${L.aport}</th><th class="num">${L.retir}</th><th class="num">${L.resultadoe}</th><th class="num">${L.rent}</th><th>${L.estado}</th></tr></thead><tbody>${arows||'<tr><td colspan="8" class="muted">'+L.sinhist+'</td></tr>'}</tbody></table>${A.length?`<p class="riesgo">${L.vol}: <b>${p1(stdev(A.map(y=>y.rent||0)))}</b> · ${L.caida}: <b>${p1(maxDD(A.map(y=>y.rent||0)))}</b></p>`:''}</div></div>
-    <div class="cols2 grow"><div>${secbar(L.rmens)}<div class="panel">${M&&M.length?barras(MLAB,M):'<p class=\'muted\' style=\'padding:22px;text-align:center\'>'+L.sinmes+'</p>'}</div></div><div>${secbar(L.ranual)}<div class="panel">${barras(A.map(y=>y.a),A.map(y=>y.rent||0))}</div></div></div>
-    </div>${FT(2)}</div>`;
-  const orows=ops.map(o=>`<tr><td>${o.fecha}</td><td>${o.op}</td><td>${o.inst}</td><td class="num">${o.imp!=null?new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:'always'}).format(o.imp):''}</td><td class="num">${o.precio!=null?t4(o.precio):''}</td><td class="num">${o.tit!=null?t4(o.tit):''}</td></tr>`).join('');
-  const p3html=`<div class="page">${HT(L.opsmov)}<div class="body">
-    <div class="grow col">${secbar(L.opsinicio)}<div class="panel"><table class="ops ${ops.length>26?'ops-xs':ops.length>18?'ops-s':''}"><thead><tr><th>${L.fecha}</th><th>${L.operacion}</th><th>${L.instrumento}</th><th class="num">${L.importe}</th><th class="num">${L.precio}</th><th class="num">${L.titulos}</th></tr></thead><tbody>${orows||'<tr><td colspan="6" class="muted">'+L.sinops+'</td></tr>'}</tbody></table></div></div>
-    <div class="cols2"><div>${secbar(L.apdisp)}<div class="panel"><div class="card2"><div class="r2"><span>${L.ap2026}</span><b>${e0(apPer)}</b></div><div class="r2"><span>${L.disp2026}</span><b>${e0(rePer)}</b></div><div class="r2"><span>${L.apini}</span><b>${e0(apInicial)}</b></div><div class="r2"><span>${L.aptot}</span><b>${e0(apTot)}</b></div><div class="r2"><span>${L.disptot}</span><b>${e0(reTot)}</b></div></div></div></div>
-      <div>${secbar(L.aviso)}<div class="panel"><div class="aviso2">${L.avisotxt}</div></div></div></div>
-    </div>${FT(3)}</div>`;
-  $('doc').innerHTML=p1html+p2html+p3html;
+  const bodyP2=`<div>${secbar(L.detanual,L.detanualcap)}<div class="panel"><table class="anual"><thead><tr><th>${L.anio}</th><th class="num">${L.inicio}</th><th class="num">${L.fin}</th><th class="num">${L.aport}</th><th class="num">${L.retir}</th><th class="num">${L.resultadoe}</th><th class="num">${L.rent}</th><th>${L.estado}</th></tr></thead><tbody>${arows||'<tr><td colspan="8" class="muted">'+L.sinhist+'</td></tr>'}</tbody></table>${A.length?`<p class="riesgo">${L.vol}: <b>${p1(stdev(A.map(y=>y.rent||0)))}</b> · ${L.caida}: <b>${p1(maxDD(A.map(y=>y.rent||0)))}</b></p>`:''}</div></div>
+    <div class="cols2 grow"><div>${secbar(L.rmens)}<div class="panel">${M&&M.length?barras(MLAB,M):'<p class=\'muted\' style=\'padding:22px;text-align:center\'>'+L.sinmes+'</p>'}</div></div><div>${secbar(L.ranual)}<div class="panel">${barras(A.map(y=>y.a),A.map(y=>y.rent||0))}</div></div></div>`;
+  const orow=o=>`<tr><td>${o.fecha}</td><td>${o.op}</td><td>${o.inst}</td><td class="num">${o.imp!=null?new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:'always'}).format(o.imp):''}</td><td class="num">${o.precio!=null?t4(o.precio):''}</td><td class="num">${o.tit!=null?t4(o.tit):''}</td></tr>`;
+  // Paginación de operaciones: troceamos para que no se corten (máx ~30 por página)
+  const OPP=30, opsChunks=[]; for(let i=0;i<ops.length;i+=OPP) opsChunks.push(ops.slice(i,i+OPP)); if(!opsChunks.length) opsChunks.push([]);
+  const clsOps=ops.length>26?'ops-xs':ops.length>18?'ops-s':'';
+  const opsBody=(chunk,parte)=>`<div class="grow col">${secbar(L.opsinicio+(opsChunks.length>1?' ('+parte+'/'+opsChunks.length+')':''))}<div class="panel"><table class="ops ${clsOps}"><thead><tr><th>${L.fecha}</th><th>${L.operacion}</th><th>${L.instrumento}</th><th class="num">${L.importe}</th><th class="num">${L.precio}</th><th class="num">${L.titulos}</th></tr></thead><tbody>${chunk.map(orow).join('')||'<tr><td colspan="6" class="muted">'+L.sinops+'</td></tr>'}</tbody></table></div></div>`;
+  const bodyApd=`<div class="cols2"><div>${secbar(L.apdisp)}<div class="panel"><div class="card2"><div class="r2"><span>${L.ap2026}</span><b>${e0(apPer)}</b></div><div class="r2"><span>${L.disp2026}</span><b>${e0(rePer)}</b></div><div class="r2"><span>${L.apini}</span><b>${e0(apInicial)}</b></div><div class="r2"><span>${L.aptot}</span><b>${e0(apTot)}</b></div><div class="r2"><span>${L.disptot}</span><b>${e0(reTot)}</b></div></div></div></div>
+      <div>${secbar(L.aviso)}<div class="panel"><div class="aviso2">${L.avisotxt}</div></div></div></div>`;
+  // ---- Ensamblar páginas con pie numerado dinámico ----
+  const PAG=[{s:L.cierre+' '+cierreFmt,b:bodyP1},{s:L.histanual,b:bodyP2}];
+  if(ops.length<=24){ PAG.push({s:L.opsmov,b:opsBody(ops,1)+bodyApd}); }
+  else { opsChunks.forEach((ch,i)=>PAG.push({s:L.opsmov,b:opsBody(ch,i+1)})); PAG.push({s:L.opsmov,b:bodyApd}); }
+  if(typeof planHtml==='function'){ const ph=planHtml(); if(ph) PAG.push({s:"Pla d'acumulació",b:ph}); }
+  const TOT=PAG.length;
+  $('doc').innerHTML=PAG.map((p,i)=>`<div class="page">${HT(p.s)}<div class="body">${p.b}</div><div class="foot2"><span>${L.confid}</span><span>${cierreFmt} · ${i+1}/${TOT}</span></div></div>`).join('');
+  // Nombre de archivo al imprimir/guardar PDF: Nombre_Apellido_fecha
+  document.title=(nom(cli)||'Informe').replace(/[^\wÀ-ſ]+/g,'_').replace(/^_+|_+$/g,'')+'_'+cierreISO;
 }
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(()=>{});
