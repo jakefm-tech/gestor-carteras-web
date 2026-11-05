@@ -805,7 +805,7 @@ function genInforme(){
   const _set=new Set(cids), _agg={};
   for(const m of st.movimientos){ if(!_set.has(m.cartera)||!m.instrumento) continue; const a=_agg[m.instrumento]||(_agg[m.instrumento]={tit:0,cT:0,cTP:0,cEUR:0}); a.tit+=m.titulos_delta||0; if((m.titulos_delta||0)>0){ if(m.precio){a.cT+=m.titulos_delta;a.cTP+=m.titulos_delta*m.precio;} a.cEUR += (m.coste!=null ? +m.coste : (m.precio? m.titulos_delta*m.precio/fxOf(st,m.instrumento) : 0)); } }
   let det=[];
-  for(const [inst,a] of Object.entries(_agg)){ if(Math.abs(a.tit)<1e-8) continue; const vl=vlUlt(st,inst); const fx=fxOf(st,inst); const pm=a.cT>0?a.cTP/a.cT:null; const vini=a.cEUR>0?a.cEUR:null; const vact=vl!=null?a.tit*vl/fx:null; det.push({nombre:st.instrumentos[inst]?.nombre||'—',pm,vlact:vl,vini,vact,dif:(vini!=null&&vact!=null)?vact-vini:null}); }
+  for(const [inst,a] of Object.entries(_agg)){ if(Math.abs(a.tit)<1e-8) continue; const vl=vlUlt(st,inst); const fx=fxOf(st,inst); const pm=a.cT>0?a.cTP/a.cT:null; /* valor inicial = coste prorrateado a los títulos que quedan (las ventas/retiradas no penalizan) */ const vini=a.cT>0?a.tit*(a.cEUR/a.cT):(a.cEUR>0?a.cEUR:null); const vact=vl!=null?a.tit*vl/fx:null; det.push({nombre:st.instrumentos[inst]?.nombre||'—',pm,vlact:vl,vini,vact,dif:(vini!=null&&vact!=null)?vact-vini:null}); }
   det.sort((a,b)=>(b.vact||0)-(a.vact||0));
   const _liq=cids.reduce((s,c)=>s+(st.liquidez[c]||0),0);
   if(Math.abs(_liq)>0.005) det.push({nombre:'Liquidez',pm:null,vlact:null,vini:null,vact:_liq,dif:null});
