@@ -829,15 +829,16 @@ function genInforme(){
     <div class="cols2 grow"><div>${secbar(L.rmens)}<div class="panel">${M&&M.length?barras(MLAB,M):'<p class=\'muted\' style=\'padding:22px;text-align:center\'>'+L.sinmes+'</p>'}</div></div><div>${secbar(L.ranual)}<div class="panel">${barras(A.map(y=>y.a),A.map(y=>y.rent||0))}</div></div></div>`;
   const orow=o=>`<tr><td>${o.fecha}</td><td>${o.op}</td><td>${o.inst}</td><td class="num">${o.imp!=null?new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:'always'}).format(o.imp):''}</td><td class="num">${o.precio!=null?t4(o.precio):''}</td><td class="num">${o.tit!=null?t4(o.tit):''}</td></tr>`;
   // Paginación de operaciones: troceamos para que no se corten (máx ~30 por página)
-  const OPP=30, opsChunks=[]; for(let i=0;i<ops.length;i+=OPP) opsChunks.push(ops.slice(i,i+OPP)); if(!opsChunks.length) opsChunks.push([]);
+  // Operaciones: ~50 por hoja (aprovechando el A4 apaisado); la última hoja lleva el bloque de aportaciones si queda sitio
+  const OPP=50, opsChunks=[]; for(let i=0;i<ops.length;i+=OPP) opsChunks.push(ops.slice(i,i+OPP)); if(!opsChunks.length) opsChunks.push([]);
   const clsOps=ops.length>26?'ops-xs':ops.length>18?'ops-s':'';
-  const opsBody=(chunk,parte)=>`<div class="grow col">${secbar(L.opsinicio+(opsChunks.length>1?' ('+parte+'/'+opsChunks.length+')':''))}<div class="panel"><table class="ops ${clsOps}"><thead><tr><th>${L.fecha}</th><th>${L.operacion}</th><th>${L.instrumento}</th><th class="num">${L.importe}</th><th class="num">${L.precio}</th><th class="num">${L.titulos}</th></tr></thead><tbody>${chunk.map(orow).join('')||'<tr><td colspan="6" class="muted">'+L.sinops+'</td></tr>'}</tbody></table></div></div>`;
-  const bodyApd=`<div class="cols2"><div>${secbar(L.apdisp)}<div class="panel"><div class="card2"><div class="r2"><span>${L.ap2026}</span><b>${e0(apPer)}</b></div><div class="r2"><span>${L.disp2026}</span><b>${e0(rePer)}</b></div><div class="r2"><span>${L.apini}</span><b>${e0(apInicial)}</b></div><div class="r2"><span>${L.aptot}</span><b>${e0(apTot)}</b></div><div class="r2"><span>${L.disptot}</span><b>${e0(reTot)}</b></div></div></div></div>
+  const opsBody=(chunk,parte,grow)=>`<div class="${grow?'grow col':'col'}">${secbar(L.opsinicio+(opsChunks.length>1?' ('+parte+'/'+opsChunks.length+')':''))}<div class="panel"><table class="ops ${clsOps}"><thead><tr><th>${L.fecha}</th><th>${L.operacion}</th><th>${L.instrumento}</th><th class="num">${L.importe}</th><th class="num">${L.precio}</th><th class="num">${L.titulos}</th></tr></thead><tbody>${chunk.map(orow).join('')||'<tr><td colspan="6" class="muted">'+L.sinops+'</td></tr>'}</tbody></table></div></div>`;
+  const bodyApd=`<div class="cols2" style="margin-top:8px"><div>${secbar(L.apdisp)}<div class="panel"><div class="card2"><div class="r2"><span>${L.ap2026}</span><b>${e0(apPer)}</b></div><div class="r2"><span>${L.disp2026}</span><b>${e0(rePer)}</b></div><div class="r2"><span>${L.apini}</span><b>${e0(apInicial)}</b></div><div class="r2"><span>${L.aptot}</span><b>${e0(apTot)}</b></div><div class="r2"><span>${L.disptot}</span><b>${e0(reTot)}</b></div></div></div></div>
       <div>${secbar(L.aviso)}<div class="panel"><div class="aviso2">${L.avisotxt}</div></div></div></div>`;
   // ---- Ensamblar páginas con pie numerado dinámico ----
   const PAG=[{s:L.cierre+' '+cierreFmt,b:bodyP1},{s:L.histanual,b:bodyP2}];
-  if(ops.length<=24){ PAG.push({s:L.opsmov,b:opsBody(ops,1)+bodyApd}); }
-  else { opsChunks.forEach((ch,i)=>PAG.push({s:L.opsmov,b:opsBody(ch,i+1)})); PAG.push({s:L.opsmov,b:bodyApd}); }
+  opsChunks.forEach((ch,i)=>{ const ult=i===opsChunks.length-1; const conApd=ult&&ch.length<=34; PAG.push({s:L.opsmov,b:opsBody(ch,i+1,!conApd)+(conApd?bodyApd:'')}); });
+  if(opsChunks[opsChunks.length-1].length>34) PAG.push({s:L.opsmov,b:bodyApd});
   if(typeof planHtml==='function'){ const ph=planHtml(); if(ph) PAG.push({s:"Pla d'acumulació",b:ph}); }
   const TOT=PAG.length;
   $('doc').innerHTML=PAG.map((p,i)=>`<div class="page">${HT(p.s)}<div class="body">${p.b}</div><div class="foot2"><span>${L.confid}</span><span>${cierreFmt} · ${i+1}/${TOT}</span></div></div>`).join('');
