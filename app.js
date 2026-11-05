@@ -757,7 +757,15 @@ function renderInformes(){
 }
 function genInforme(){
   const st=ESTADO, cli=st.personas[SELCLI]; if(!cli){ $('doc').innerHTML=''; return; }
-  const cids=[...document.querySelectorAll('.icart:checked')].map(i=>i.value);
+  const marcadas=[...document.querySelectorAll('.icart:checked')].map(i=>i.value);
+  if(!marcadas.length){ $('doc').innerHTML='<div class="page"><div class="muted" style="padding:40px">Marca al menos una cartera.</div></div>'; return; }
+  // Un informe independiente por cartera (individuales y conjuntas se generan por separado)
+  $('doc').innerHTML=marcadas.map(cid=>armarInforme([cid])).join('');
+  const _F=(SELFECHA&&/^\d{4}-\d{2}-\d{2}$/.test(SELFECHA))?SELFECHA:(()=>{let mx='';for(const i in st.vl)for(const k in st.vl[i])if(k>mx)mx=k;return mx||'2026-08-31';})();
+  document.title=(nom(cli)||'Informe').replace(/[^\wÀ-ſ]+/g,'_').replace(/^_+|_+$/g,'')+'_'+_F;
+}
+function armarInforme(cids){
+  const st=ESTADO, cli=st.personas[SELCLI]; if(!cli) return '';
   const lang=(cli&&cli.idioma==='ca')?'ca':'es';
   const LBL={es:{y:"y",informe:"INFORME DE CARTERA",cierre:"Cierre",patrimonio:"Patrimonio",resultado:"Resultado 2026",rentabilidad:"Rentabilidad 2026",ultmes:"Último mes",comp:"Composición actual",compcap:"Detalle de la inversión",activo:"Activo",vlc:"VL compra",vlact:"VL actual",vini:"Valor inicial",vact:"Valor actual",dife:"Dif. €",difp:"Dif. %",peso:"Peso",total:"Total",distrib:"Distribución por pesos",distribcap:"Peso de cada instrumento",evol:"Evolución del año",evolcap:"Rentabilidad acumulada 2026",sinmes:"Sin datos mensuales para este cliente.",histanual:"Histórico anual",detanual:"Detalle anual",detanualcap:"Aportaciones, retiradas y resultado",anio:"Año",inicio:"Inicio €",fin:"Fin €",aport:"Aport. €",retir:"Retir. €",resultadoe:"Resultado €",rent:"Rent.",estado:"Estado",encurso:"En curso",cerrado:"Cerrado",sinhist:"Sin histórico anual.",vol:"Volatilidad anual",caida:"Caída máxima",rmens:"Rentabilidad mensual 2026",ranual:"Rentabilidad anual",opsmov:"Operaciones y movimientos",opsinicio:"Operaciones desde inicio",fecha:"Fecha",operacion:"Operación",instrumento:"Instrumento",importe:"Importe €",precio:"Precio",titulos:"Títulos",sinops:"Sin operaciones.",apdisp:"Aportaciones y disposiciones",ap2026:"Aportaciones 2026",disp2026:"Disposiciones 2026",apini:"Aportación inicial (inicio de la relación)",aptot:"Aportaciones totales desde inicio",disptot:"Disposiciones desde inicio",aviso:"Aviso legal",confid:"Informe confidencial · uso exclusivo del cliente",sinevol:"Sin evolución mensual.",avisotxt:"Documento informativo de carácter confidencial, para uso exclusivo del cliente. La información se ha elaborado a partir de fuentes consideradas fiables a la fecha de emisión y no constituye asesoramiento ni recomendación de inversión. Los datos se refieren al cierre indicado y pueden variar. Rentabilidades pasadas no garantizan rentabilidades futuras."},
   ca:{y:"i",informe:"INFORME DE CARTERA",cierre:"Tancament",patrimonio:"Patrimoni",resultado:"Resultat 2026",rentabilidad:"Rendibilitat 2026",ultmes:"Últim mes",comp:"Composició actual",compcap:"Detall de la inversió",activo:"Actiu",vlc:"VL compra",vlact:"VL actual",vini:"Valor inicial",vact:"Valor actual",dife:"Dif. €",difp:"Dif. %",peso:"Pes",total:"Total",distrib:"Distribució per pesos",distribcap:"Pes de cada instrument",evol:"Evolució de l'any",evolcap:"Rendibilitat acumulada 2026",sinmes:"Sense dades mensuals per a aquest client.",histanual:"Històric anual",detanual:"Detall anual",detanualcap:"Aportacions, retirades i resultat",anio:"Any",inicio:"Inici €",fin:"Fi €",aport:"Aport. €",retir:"Retir. €",resultadoe:"Resultat €",rent:"Rend.",estado:"Estat",encurso:"En curs",cerrado:"Tancat",sinhist:"Sense històric anual.",vol:"Volatilitat anual",caida:"Caiguda màxima",rmens:"Rendibilitat mensual 2026",ranual:"Rendibilitat anual",opsmov:"Operacions i moviments",opsinicio:"Operacions des de l'inici",fecha:"Data",operacion:"Operació",instrumento:"Instrument",importe:"Import €",precio:"Preu",titulos:"Títols",sinops:"Sense operacions.",apdisp:"Aportacions i disposicions",ap2026:"Aportacions 2026",disp2026:"Disposicions 2026",apini:"Aportació inicial (inici de la relació)",aptot:"Aportacions totals des de l'inici",disptot:"Disposicions des de l'inici",aviso:"Avís legal",confid:"Informe confidencial · ús exclusiu del client",sinevol:"Sense evolució mensual.",avisotxt:"Document informatiu de caràcter confidencial, per a ús exclusiu del client. La informació s'ha elaborat a partir de fonts considerades fiables a la data d'emissió i no constitueix assessorament ni recomanació d'inversió. Les dades es refereixen al tancament indicat i poden variar. Les rendibilitats passades no garanteixen rendibilitats futures."}};
@@ -772,14 +780,14 @@ function genInforme(){
   // Valoración a la fecha elegida: VL, títulos y liquidez considerando solo lo ocurrido hasta esa fecha
   const vlF=(inst)=>{ const m=st.vl[inst]||{}; const ks=Object.keys(m).filter(f=>!FECHA||f<=FECHA).sort(); return ks.length?m[ks[ks.length-1]]:null; };
   const liqAFecha=(cid)=>{ let v=0; for(const m of st.movimientos){ if(m.cartera!==cid)continue; if(FECHA&&m.fecha&&m.fecha>FECHA)continue; v+=m.efectivo_delta||0; } return v; };
-  if(!cids.length){ $('doc').innerHTML='<div class="page"><div class="muted">Marca al menos una cartera.</div></div>'; return; }
+  if(!cids.length) return '';
   const e0=n=>new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:'always'}).format(n||0)+' €';
   const p2=n=>(n>=0?'+':'')+new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}).format((n||0)*100)+' %';
   const p1=n=>new Intl.NumberFormat('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1}).format((n||0)*100)+' %';
   const t4=n=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:4}).format(n||0);
   const patTotal=(()=>{ let v=0; const pos={}; for(const m of st.movimientos){ if(!cids.includes(m.cartera)||!m.instrumento)continue; if(FECHA&&m.fecha&&m.fecha>FECHA)continue; pos[m.instrumento]=(pos[m.instrumento]||0)+(m.titulos_delta||0); } for(const [inst,t] of Object.entries(pos)){ if(Math.abs(t)<1e-8)continue; const vl=vlF(inst); if(vl!=null)v+=t*vl/fxOf(st,inst); } return v+cids.reduce((a,c)=>a+liqAFecha(c),0); })();
   const valF=patTotal-cids.reduce((a,c)=>a+liqAFecha(c),0);
-  if(FECHA && Math.abs(patTotal)<0.01){ const primerVL=(()=>{let mn='';for(const _i in st.vl)for(const _k in st.vl[_i])if(!mn||_k<mn)mn=_k;return mn;})(); const _f=d=>d?d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4):''; $('doc').innerHTML=`<div class="page"><div class="htop"><div class="t">${titulo}<small>${L.informe}</small></div><div class="r">${cierreFmt}</div></div><div style="flex:1;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--gris);font-size:14px;padding:40px">No hay posiciones valorables a ${cierreFmt}.<br>El primer cierre con datos es el ${_f(primerVL)}; elige esa fecha o una posterior.</div></div>`; return; }
+  if(FECHA && Math.abs(patTotal)<0.01){ const primerVL=(()=>{let mn='';for(const _i in st.vl)for(const _k in st.vl[_i])if(!mn||_k<mn)mn=_k;return mn;})(); const _f=d=>d?d.slice(8,10)+'/'+d.slice(5,7)+'/'+d.slice(0,4):''; return `<div class="page"><div class="htop"><div class="t">${titulo}<small>${L.informe}</small></div><div class="r">${cierreFmt}</div></div><div style="flex:1;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--gris);font-size:14px;padding:40px">No hay posiciones valorables a ${cierreFmt}.<br>El primer cierre con datos es el ${_f(primerVL)}; elige esa fecha o una posterior.</div></div>`; }
   const prod=productos(st,cids);
   // agregar histórico anual por año
   const anualMap={};
@@ -870,9 +878,7 @@ function genInforme(){
   if(opsChunks[opsChunks.length-1].length>34) PAG.push({s:L.opsmov,b:bodyApd});
   if(typeof planHtml==='function'){ const ph=planHtml(); if(ph) PAG.push({s:"Pla d'acumulació",b:ph}); }
   const TOT=PAG.length;
-  $('doc').innerHTML=PAG.map((p,i)=>`<div class="page">${HT(p.s)}<div class="body">${p.b}</div><div class="foot2"><span>${L.confid}</span><span>${cierreFmt} · ${i+1}/${TOT}</span></div></div>`).join('');
-  // Nombre de archivo al imprimir/guardar PDF: Nombre_Apellido_fecha
-  document.title=(nom(cli)||'Informe').replace(/[^\wÀ-ſ]+/g,'_').replace(/^_+|_+$/g,'')+'_'+cierreISO;
+  return PAG.map((p,i)=>`<div class="page">${HT(p.s)}<div class="body">${p.b}</div><div class="foot2"><span>${L.confid}</span><span>${cierreFmt} · ${i+1}/${TOT}</span></div></div>`).join('');
 }
 
 if('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js').catch(()=>{});
