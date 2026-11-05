@@ -7,7 +7,7 @@ const esc = (s) => String(s==null?'':s).replace(/"/g,'&quot;');
 const IDIOMAS = {es:'Español',ca:'Català',en:'English'};
 const TIPOS_MOV = ['Compra','Venta','Aportación','Disposición','Dividendo','Comisión'];
 
-let VAULT=null, AUTOR=localStorage.getItem('autor')||null, ESTADO=null, SEL=null, SELC=null, SELCLI=null, NUEVO=false, FILTRO='';
+let VAULT=null, AUTOR=localStorage.getItem('autor')||null, ESTADO=null, SEL=null, SELC=null, SELCLI=null, SELFECHA='', NUEVO=false, FILTRO='';
 const ASESORES={'AJ':'AJ (Ana y Jacobo)','Francisco Ragolta':'Paco Ragolta'};
 const ASESOR_AUTOR={jacobo:'AJ',ana:'AJ',francisco:'Francisco Ragolta'};
 const asesorActual=()=>ASESOR_AUTOR[AUTOR]||'AJ';
@@ -748,10 +748,11 @@ function renderInformes(){
     <div class="card no-print"><div class="row"><label class="chk">Cliente
       <select id="ic">${personas.map(p=>`<option value="${p.id}" ${p.id===SELCLI?'selected':''}>${nom(p)}</option>`).join('')}</select></label>
       <span class="muted">Carteras:</span> ${carts.map(c=>`<label class="chk"><input type="checkbox" class="icart" value="${c.cid}" checked> ${c.nombre}</label>`).join('')||'<span class="muted">este cliente no tiene carteras</span>'}
+      <label class="chk">Fecha <input id="ifecha" type="date" value="${SELFECHA||''}" title="Fecha de valoración (vacío = último cierre)"></label>
       <button class="primary" id="bGen">Generar</button><button class="ghost" id="bPdf" style="margin-left:auto">Exportar a PDF</button></div></div>
     <div id="doc"></div>`;
   $('ic').onchange=e=>{ SELCLI=e.target.value; renderInformes(); };
-  $('bGen').onclick=genInforme; $('bPdf').onclick=()=>window.print();
+  $('bGen').onclick=()=>{ SELFECHA=($('ifecha').value||''); genInforme(); }; $('bPdf').onclick=()=>window.print();
   genInforme();
 }
 function genInforme(){
@@ -764,15 +765,20 @@ function genInforme(){
   const titNombres=[...new Set(cids.flatMap(c=>titularesDe(st,c)))].map(pid=>nom(st.personas[pid])).filter(Boolean);
   const fmtN=a=>a.length<=1?(a[0]||''):(a.length===2?a.join(' '+L.y+' '):a.slice(0,-1).join(', ')+' '+L.y+' '+a[a.length-1]);
   const titulo=(titNombres.length?fmtN(titNombres):nom(cli)).toUpperCase();
-  const cierreISO=(()=>{let mx='';for(const _i in st.vl){for(const _k in st.vl[_i])if(_k>mx)mx=_k;}return mx||'2026-08-31';})();
+  const FECHA=(SELFECHA&&/^\d{4}-\d{2}-\d{2}$/.test(SELFECHA))?SELFECHA:null;
+  const ultVL=(()=>{let mx='';for(const _i in st.vl){for(const _k in st.vl[_i])if(_k>mx)mx=_k;}return mx||'2026-08-31';})();
+  const cierreISO=FECHA||ultVL;
   const cierreFmt=cierreISO.slice(8,10)+'/'+cierreISO.slice(5,7)+'/'+cierreISO.slice(0,4);
+  // Valoración a la fecha elegida: VL, títulos y liquidez considerando solo lo ocurrido hasta esa fecha
+  const vlF=(inst)=>{ const m=st.vl[inst]||{}; const ks=Object.keys(m).filter(f=>!FECHA||f<=FECHA).sort(); return ks.length?m[ks[ks.length-1]]:null; };
+  const liqAFecha=(cid)=>{ let v=0; for(const m of st.movimientos){ if(m.cartera!==cid)continue; if(FECHA&&m.fecha&&m.fecha>FECHA)continue; v+=m.efectivo_delta||0; } return v; };
   if(!cids.length){ $('doc').innerHTML='<div class="page"><div class="muted">Marca al menos una cartera.</div></div>'; return; }
   const e0=n=>new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:'always'}).format(n||0)+' €';
   const p2=n=>(n>=0?'+':'')+new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}).format((n||0)*100)+' %';
   const p1=n=>new Intl.NumberFormat('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1}).format((n||0)*100)+' %';
   const t4=n=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:4}).format(n||0);
-  const patTotal=cids.reduce((a,c)=>a+Libro.patrimonio(st,c),0);
-  const valF=patTotal-cids.reduce((a,c)=>a+(st.liquidez[c]||0),0);
+  const patTotal=(()=>{ let v=0; const pos={}; for(const m of st.movimientos){ if(!cids.includes(m.cartera)||!m.instrumento)continue; if(FECHA&&m.fecha&&m.fecha>FECHA)continue; pos[m.instrumento]=(pos[m.instrumento]||0)+(m.titulos_delta||0); } for(const [inst,t] of Object.entries(pos)){ if(Math.abs(t)<1e-8)continue; const vl=vlF(inst); if(vl!=null)v+=t*vl/fxOf(st,inst); } return v+cids.reduce((a,c)=>a+liqAFecha(c),0); })();
+  const valF=patTotal-cids.reduce((a,c)=>a+liqAFecha(c),0);
   const prod=productos(st,cids);
   // agregar histórico anual por año
   const anualMap={};
@@ -803,11 +809,11 @@ function genInforme(){
   const FT=n=>`<div class="foot2"><span>${L.confid}</span><span>${cierreFmt} · ${n}/3</span></div>`;
   // Composición detallada (coste, valor actual, diferencia) desde el libro de movimientos
   const _set=new Set(cids), _agg={};
-  for(const m of st.movimientos){ if(!_set.has(m.cartera)||!m.instrumento) continue; const a=_agg[m.instrumento]||(_agg[m.instrumento]={tit:0,cT:0,cTP:0,cEUR:0}); a.tit+=m.titulos_delta||0; if((m.titulos_delta||0)>0){ if(m.precio){a.cT+=m.titulos_delta;a.cTP+=m.titulos_delta*m.precio;} a.cEUR += (m.coste!=null ? +m.coste : (m.precio? m.titulos_delta*m.precio/fxOf(st,m.instrumento) : 0)); } }
+  for(const m of st.movimientos){ if(!_set.has(m.cartera)||!m.instrumento) continue; if(FECHA&&m.fecha&&m.fecha>FECHA) continue; const a=_agg[m.instrumento]||(_agg[m.instrumento]={tit:0,cT:0,cTP:0,cEUR:0}); a.tit+=m.titulos_delta||0; if((m.titulos_delta||0)>0){ if(m.precio){a.cT+=m.titulos_delta;a.cTP+=m.titulos_delta*m.precio;} a.cEUR += (m.coste!=null ? +m.coste : (m.precio? m.titulos_delta*m.precio/fxOf(st,m.instrumento) : 0)); } }
   let det=[];
-  for(const [inst,a] of Object.entries(_agg)){ if(Math.abs(a.tit)<1e-8) continue; const vl=vlUlt(st,inst); const fx=fxOf(st,inst); const pm=a.cT>0?a.cTP/a.cT:null; /* valor inicial = coste prorrateado a los títulos que quedan (las ventas/retiradas no penalizan) */ const vini=a.cT>0?a.tit*(a.cEUR/a.cT):(a.cEUR>0?a.cEUR:null); const vact=vl!=null?a.tit*vl/fx:null; det.push({nombre:st.instrumentos[inst]?.nombre||'—',pm,vlact:vl,vini,vact,dif:(vini!=null&&vact!=null)?vact-vini:null}); }
+  for(const [inst,a] of Object.entries(_agg)){ if(Math.abs(a.tit)<1e-8) continue; const vl=vlF(inst); const fx=fxOf(st,inst); const pm=a.cT>0?a.cTP/a.cT:null; /* valor inicial = coste prorrateado a los títulos que quedan (las ventas/retiradas no penalizan) */ const vini=a.cT>0?a.tit*(a.cEUR/a.cT):(a.cEUR>0?a.cEUR:null); const vact=vl!=null?a.tit*vl/fx:null; det.push({nombre:st.instrumentos[inst]?.nombre||'—',pm,vlact:vl,vini,vact,dif:(vini!=null&&vact!=null)?vact-vini:null}); }
   det.sort((a,b)=>(b.vact||0)-(a.vact||0));
-  const _liq=cids.reduce((s,c)=>s+(st.liquidez[c]||0),0);
+  const _liq=cids.reduce((s,c)=>s+liqAFecha(c),0);
   if(Math.abs(_liq)>0.005) det.push({nombre:'Liquidez',pm:null,vlact:null,vini:null,vact:_liq,dif:null});
   const _tot=det.reduce((s,r)=>s+(r.vact||0),0)||1; det.forEach(r=>r.peso=(r.vact||0)/_tot);
   const compRows=det.map(r=>`<tr><td>${r.nombre}</td><td class="num">${r.pm!=null?t4(r.pm):'—'}</td><td class="num">${r.vini!=null?e0(r.vini):'—'}</td><td class="num">${r.vlact!=null?t4(r.vlact):'—'}</td><td class="num">${r.vact!=null?e0(r.vact):'—'}</td><td class="num ${r.dif>=0?'pos':'neg'}">${r.dif!=null?e0(r.dif):'—'}</td><td class="num ${r.dif>=0?'pos':'neg'}">${(r.vini&&r.dif!=null)?p1(r.dif/r.vini):'—'}</td><td class="num">${p1(r.peso)}</td></tr>`).join('');
