@@ -35,6 +35,7 @@ function pantallaConexion(hg){
 
 let TAB='panel';
 let CLIORD='pat';
+let FICHATAB='carteras';
 function entrar(){
   document.body.innerHTML=`<div class="top"><span class="brand">Gestor de Carteras</span><span class="user">Usuario: ${AUTOR} · datos en OneDrive</span></div>
     <div class="tabs">
@@ -373,7 +374,7 @@ function renderClientes(){
       <span class="muted" style="margin-left:auto">${datos.length} clientes · ${eur(tot)}</span>
       <button class="primary" id="bNuevo">+ Nuevo cliente</button></div></div>
     <div class="cli-gallery">${cards}</div>`;
-  document.querySelectorAll('.ccard').forEach(e=>e.onclick=()=>{ SEL=e.dataset.pid; NUEVO=false; renderClientes(); });
+  document.querySelectorAll('.ccard').forEach(e=>e.onclick=()=>{ SEL=e.dataset.pid; NUEVO=false; FICHATAB='carteras'; renderClientes(); });
   $('bNuevo').onclick=()=>{ NUEVO=true; SEL=null; renderClientes(); };
   $('cliord').onchange=e=>{ CLIORD=e.target.value; renderClientes(); };
   const bb=$('buscar'); bb.oninput=()=>{ FILTRO=bb.value; const ff=FILTRO.toLowerCase(); document.querySelectorAll('.ccard').forEach(el=>{ el.style.display=nom(st.personas[el.dataset.pid]).toLowerCase().includes(ff)?'':'none'; }); };
@@ -396,9 +397,17 @@ async function crearCliente(){
   await apuntar(l); NUEVO=false; SEL=pid; await recargarYrender();
 }
 function renderFicha(){
-  const st=ESTADO, c=$('ficha'); if(!SEL){ c.innerHTML=`<h2>Ficha</h2><p class="muted">Selecciona una persona de la lista, o pulsa “+ Nuevo cliente”.</p>`; return; }
+  const st=ESTADO, c=$('ficha'); if(!SEL){ c.innerHTML=`<h2>Ficha</h2><p class="muted">Selecciona una persona de la galería.</p>`; return; }
   const p=st.personas[SEL], otras=Object.values(st.personas).filter(x=>x.id!==SEL);
-  const cart=cartsDe(st,SEL).map(k=>{
+  const carts=cartsDe(st,SEL), patTot=carts.reduce((a,k)=>a+Libro.patrimonio(st,k.cid),0);
+  const asesores=[...new Set(carts.map(k=>ASESORES[k.asesor||'AJ']||(k.asesor||'AJ')))].join(', ')||'—';
+  const cuentas=`<div class="grid2f">
+      <div class="fldf"><label>DNI</label><input id="fdni" value="${esc(p.dni||'')}" placeholder="00000000X"></div>
+      <div class="fldf"><label>Cuenta origen (IBAN en el bróker)</label><input id="fori" value="${esc(p.cuentaOrigen||'')}" placeholder="ES.."></div>
+      <div class="fldf"><label>Banco destino</label><input id="fban" value="${esc(p.bancoDestino||'')}"></div>
+      <div class="fldf"><label>IBAN destino</label><input id="fiban" value="${esc(p.ibanDestino||'')}" placeholder="ES.."></div></div>`;
+  // ---- Panel: Carteras ----
+  const cart=carts.map(k=>{
     const t=titularesDe(st,k.cid);
     const chips=t.map(pid=>`<span class="chip">${nom(st.personas[pid])}${pid!==SEL?` <button data-q="${k.cid}" data-p="${pid}">×</button>`:''}</span>`).join('');
     const noT=otras.filter(x=>!t.includes(x.id));
@@ -406,32 +415,47 @@ function renderFicha(){
     return `<div class="cartera"><div class="row"><input data-cn="${k.cid}" value="${esc(k.nombre)}" style="flex:1">
       <select data-ct="${k.cid}"><option value="individual" ${k.tipo==='individual'?'selected':''}>Individual</option><option value="conjunta" ${k.tipo==='conjunta'?'selected':''}>Conjunta</option></select>
       <select data-casr="${k.cid}" title="Asesor">${Object.keys(ASESORES).map(a=>`<option value="${a}" ${((k.asesor||'AJ')===a)?'selected':''}>${ASESORES[a]}</option>`).join('')}</select>
-      <button class="ghost" data-gc="${k.cid}">Guardar</button></div>
+      <button class="ghost" data-gc="${k.cid}">Guardar</button><b class="num" style="margin-left:auto">${eur(Libro.patrimonio(st,k.cid))}</b></div>
       <div class="chips" style="margin-top:8px">${chips}</div>${add}
       <div style="margin-top:6px"><button class="danger" data-baja="${k.cid}">Dar de baja</button>
-        <button class="danger" data-del="${k.cid}" style="margin-left:6px">Eliminar</button>
-        <span class="muted" style="margin-left:8px">${eur(Libro.patrimonio(st,k.cid))}</span></div></div>`;}).join('')||'<p class="muted">Sin carteras. Crea una abajo.</p>';
-  c.innerHTML=`<h2>Ficha de ${nom(p)}</h2>
-    <div class="row"><input id="fn" value="${esc(p.nombre)}" placeholder="Nombre"><input id="fa" value="${esc(p.apellidos)}" placeholder="Apellidos"></div>
-    <div class="row" style="margin-top:8px"><input id="fe" value="${esc(p.email)}" placeholder="Email"><input id="ft" value="${esc(p.telefono)}" placeholder="Teléfono"></div>
-    <div class="row" style="margin-top:8px"><label class="chk">Idioma <select id="fi">${Object.entries(IDIOMAS).map(([k,v])=>`<option value="${k}" ${(p.idioma||'es')===k?'selected':''}>${v}</option>`).join('')}</select></label>
-      <button class="primary" id="bF">Guardar ficha</button><button class="danger" id="bDP" style="margin-left:auto">Eliminar cliente…</button><span class="muted" id="fm"></span></div>
-    <div style="margin-top:8px"><input id="fdni" value="${esc(p.dni||'')}" placeholder="DNI"></div>
-    <div class="row" style="margin-top:8px"><input id="fori" value="${esc(p.cuentaOrigen||'')}" placeholder="Cuenta origen (IBAN en el bróker)"></div>
-    <div class="row" style="margin-top:8px"><input id="fban" value="${esc(p.bancoDestino||'')}" placeholder="Banco destino"><input id="fiban" value="${esc(p.ibanDestino||'')}" placeholder="IBAN destino"></div>
-    <div style="margin-top:16px"><h2>Carteras</h2>${cart}</div>
-    <div style="margin-top:16px;border-top:1px solid var(--linea);padding-top:12px">
-      <h2>Carta de transferencia (Renta 4)</h2>
-      <p class="muted" style="margin:-4px 0 10px">Usa los datos de arriba (DNI y cuentas). Los guardas en la ficha o los rellenas solo para esta carta.</p>
-      <div class="row"><label class="chk">Fecha <input id="tfecha" type="date" value="2026-08-31"></label><input id="timp" placeholder="Importe (€)" inputmode="decimal" style="max-width:160px"></div>
-      <div class="row" style="margin-top:8px"><label class="chk">Cartera <select id="tcart">${cartsDe(st,SEL).map(c=>`<option value="${c.cid}">${esc(c.nombre)}</option>`).join('')||'<option value="">(sin cartera)</option>'}</select></label><label class="chk"><input type="checkbox" id="tdisp" checked> registrar la salida como Disposición (concilia el patrimonio)</label></div>
-      <div class="row" style="margin-top:10px"><button class="primary" id="bCarta">Generar Word</button><span class="muted" id="tmsg"></span></div></div>
-    <div style="margin-top:12px;border-top:1px solid var(--linea);padding-top:12px">
+        <button class="danger" data-del="${k.cid}" style="margin-left:6px">Eliminar</button></div></div>`;}).join('')||'<p class="muted">Sin carteras. Crea una abajo.</p>';
+  const panelCarteras=`${cart}
+    <div style="margin-top:14px;border-top:1px solid var(--linea);padding-top:12px">
       <div class="row"><input id="ncn" placeholder="Nombre nueva cartera" value="Cartera individual" style="flex:1"></div>
       <p class="muted" style="margin:8px 0 4px">Otros titulares (marca para conjunta):</p>
       <div class="chks">${otras.map(x=>`<label class="chk"><input type="checkbox" class="co" value="${x.id}"> ${nom(x)}</label>`).join('')||'<span class="muted">no hay más personas</span>'}</div>
       <div class="row" style="margin-top:8px"><button class="primary" id="bNC">Crear cartera para ${p.nombre}</button></div></div>`;
-  $('bF').onclick=guardarFicha; $('bNC').onclick=nuevaCartera; $('bDP').onclick=()=>borrarPersona(SEL); if($('bCarta'))$('bCarta').onclick=generarCarta;
+  // ---- Panel: Datos y cuentas ----
+  const panelDatos=`<div class="grid2f">
+      <div class="fldf"><label>Nombre</label><input id="fn" value="${esc(p.nombre)}"></div>
+      <div class="fldf"><label>Apellidos</label><input id="fa" value="${esc(p.apellidos)}"></div>
+      <div class="fldf"><label>Email</label><input id="fe" value="${esc(p.email)}"></div>
+      <div class="fldf"><label>Teléfono</label><input id="ft" value="${esc(p.telefono)}"></div>
+      <div class="fldf"><label>Idioma</label><select id="fi">${Object.entries(IDIOMAS).map(([k,v])=>`<option value="${k}" ${(p.idioma||'es')===k?'selected':''}>${v}</option>`).join('')}</select></div></div>
+    <div style="margin-top:12px;border-top:1px solid var(--linea);padding-top:10px"><div class="muted" style="font-size:11.5px;margin-bottom:6px">Datos para la carta de transferencia</div>${cuentas}</div>
+    <div class="row" style="margin-top:12px"><button class="primary" id="bF">Guardar ficha</button><span class="muted" id="fm"></span></div>`;
+  // ---- Panel: Transferencia R4 ----
+  const panelTransf=`<p class="muted" style="margin:-2px 0 10px">Carta de transferencia a Renta 4. Puedes editar el DNI y las cuentas solo para esta carta; para guardarlos en la ficha, ve a «Datos y cuentas».</p>
+    ${cuentas}
+    <div class="row" style="margin-top:12px"><label class="chk">Fecha <input id="tfecha" type="date" value="2026-08-31"></label><input id="timp" placeholder="Importe (€)" inputmode="decimal" style="max-width:160px"></div>
+    <div class="row" style="margin-top:8px"><label class="chk">Cartera <select id="tcart">${carts.map(k=>`<option value="${k.cid}">${esc(k.nombre)}</option>`).join('')||'<option value="">(sin cartera)</option>'}</select></label><label class="chk"><input type="checkbox" id="tdisp" checked> registrar como Disposición (concilia el patrimonio)</label></div>
+    <div class="row" style="margin-top:10px"><button class="primary" id="bCarta">Generar Word</button><span class="muted" id="tmsg"></span></div>`;
+  const panel = FICHATAB==='datos'?panelDatos : FICHATAB==='transferencia'?panelTransf : panelCarteras;
+  const ini=(((p.nombre||'')[0]||'')+((p.apellidos||'')[0]||'')||'?').toUpperCase();
+  c.innerHTML=`<div class="ficha-head">
+      <div class="av">${ini}</div>
+      <div style="flex:1"><div class="ph1" style="font-size:18px;margin:0">${nom(p)}</div><div class="sub" style="margin:0">${carts.length} cartera${carts.length===1?'':'s'} · ${eur(patTot)} · ${asesores}</div></div>
+      <button class="danger" id="bDP">Eliminar cliente…</button></div>
+    <div class="ftabs">
+      <div class="ftab ${FICHATAB==='carteras'?'on':''}" data-ft="carteras">Carteras</div>
+      <div class="ftab ${FICHATAB==='datos'?'on':''}" data-ft="datos">Datos y cuentas</div>
+      <div class="ftab ${FICHATAB==='transferencia'?'on':''}" data-ft="transferencia">Transferencia R4</div></div>
+    <div>${panel}</div>`;
+  $('bDP').onclick=()=>borrarPersona(SEL);
+  c.querySelectorAll('[data-ft]').forEach(t=>t.onclick=()=>{ FICHATAB=t.dataset.ft; renderFicha(); });
+  if($('bF')) $('bF').onclick=guardarFicha;
+  if($('bNC')) $('bNC').onclick=nuevaCartera;
+  if($('bCarta')) $('bCarta').onclick=generarCarta;
   c.querySelectorAll('[data-gc]').forEach(b=>b.onclick=()=>guardarCartera(b.dataset.gc));
   c.querySelectorAll('[data-baja]').forEach(b=>b.onclick=()=>bajaCartera(b.dataset.baja));
   c.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>borrarCartera(b.dataset.del));

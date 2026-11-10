@@ -243,3 +243,14 @@ th.num{text-align:right}
 #view #volver:hover{color:var(--salmon-osc)}
 @media(max-width:820px){#view .cli-gallery{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){#view .cli-gallery{grid-template-columns:1fr}}
+#view .ficha-head{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+#view .ficha-head .av{width:48px;height:48px;border-radius:50%;background:var(--salmon-cla);color:#5f4446;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:16px;flex:none}
+#view .ficha-head .danger{font-size:12.5px}
+#view .ftabs{display:flex;gap:4px;border-bottom:1px solid var(--linea);margin-bottom:14px;flex-wrap:wrap}
+#view .ftab{padding:8px 14px;font-size:13px;color:var(--gris);border-bottom:2px solid transparent;cursor:pointer}
+#view .ftab.on{color:var(--salmon-osc);font-weight:700;border-bottom-color:var(--salmon-osc)}
+#view .grid2f{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#view .fldf{display:flex;flex-direction:column;gap:3px}
+#view .fldf label{font-size:11px;color:var(--gris)}
+#view .fldf input,#view .fldf select{width:100%;margin-top:0;background:#fff;border-color:var(--linea)}
+@media(max-width:620px){#view .grid2f{grid-template-columns:1fr}}
