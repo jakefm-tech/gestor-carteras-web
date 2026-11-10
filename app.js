@@ -34,6 +34,7 @@ function pantallaConexion(hg){
 }
 
 let TAB='panel';
+let CLIORD='pat';
 function entrar(){
   document.body.innerHTML=`<div class="top"><span class="brand">Gestor de Carteras</span><span class="user">Usuario: ${AUTOR} · datos en OneDrive</span></div>
     <div class="tabs">
@@ -347,21 +348,35 @@ async function generarCarta(){
 // ============ CLIENTES ============
 function renderClientes(){
   const st=ESTADO; if(SEL&&!st.personas[SEL]) SEL=null;
-  const personas=Object.values(st.personas).sort((a,b)=>nom(a).localeCompare(nom(b)));
+  // Nuevo cliente o ficha enfocada: a pantalla completa, con vuelta a la galería
+  if(NUEVO || SEL){
+    $('view').innerHTML=`<h1>Clientes</h1>
+      <div id="volver" style="display:inline-block;font-size:13px;color:var(--gris);margin-bottom:10px;cursor:pointer">← Volver a la galería</div>
+      <div class="card" id="ficha" style="margin-top:0"></div>`;
+    $('volver').onclick=()=>{ NUEVO=false; SEL=null; renderClientes(); };
+    if(NUEVO) renderFichaNueva(); else renderFicha();
+    return;
+  }
+  // Galería de fichas
+  const datos=Object.values(st.personas).map(p=>{ const carts=cartsDe(st,p.id); return {p,n:carts.length,pat:carts.reduce((a,c)=>a+Libro.patrimonio(st,c.cid),0),ext:carts.some(c=>esExterna(st,c.cid))}; });
+  if(CLIORD==='nombre') datos.sort((a,b)=>nom(a.p).localeCompare(nom(b.p))); else datos.sort((a,b)=>b.pat-a.pat);
   const f=FILTRO.toLowerCase();
-  const lista=personas.filter(p=>nom(p).toLowerCase().includes(f)).map(p=>`<div class="item ${(p.id===SEL&&!NUEVO)?'sel':''}" data-pid="${p.id}"><div class="n">${nom(p)}</div><div class="m">${cartsDe(st,p.id).length} cartera(s)</div></div>`).join('')||'<div class="muted" style="padding:8px">Sin resultados.</div>';
+  const ini=p=>{ const a=(p.nombre||'').trim()[0]||'', b=(p.apellidos||'').trim()[0]||''; return ((a+b)||'?').toUpperCase(); };
+  const cards=datos.filter(x=>nom(x.p).toLowerCase().includes(f)).map(x=>`<div class="ccard" data-pid="${x.p.id}">
+      <div class="cardhd"><div class="av">${ini(x.p)}</div><div><div class="nm">${nom(x.p)}</div><div class="mt">${x.n} cartera${x.n===1?'':'s'}${x.ext?' · <span style="color:var(--error)">Paco</span>':''}</div></div></div>
+      <div class="pat">${eur(x.pat)}</div></div>`).join('')||'<div class="muted" style="padding:14px">Sin resultados.</div>';
+  const tot=datos.reduce((a,x)=>a+x.pat,0);
   $('view').innerHTML=`<h1>Clientes</h1>
-    <div class="split">
-      <div class="card">
-        <div class="row" style="justify-content:space-between;align-items:center"><h2 style="margin:0">Personas <span class="muted" style="font-weight:400">(${personas.length})</span></h2><button class="primary" id="bNuevo">+ Nuevo cliente</button></div>
-        <input id="buscar" placeholder="Buscar cliente…" value="${esc(FILTRO)}" style="width:100%;background:#fff;border-color:var(--linea);margin:12px 0">
-        <div class="listaP">${lista}</div>
-      </div>
-      <div class="card" id="ficha"></div></div>`;
-  document.querySelectorAll('.item').forEach(e=>e.onclick=()=>{ SEL=e.dataset.pid; NUEVO=false; renderClientes(); });
+    <div class="card" style="margin-top:0"><div class="cli-toolbar">
+      <input id="buscar" placeholder="Buscar cliente…" value="${esc(FILTRO)}">
+      <select id="cliord"><option value="pat" ${CLIORD!=='nombre'?'selected':''}>Ordenar: patrimonio</option><option value="nombre" ${CLIORD==='nombre'?'selected':''}>Ordenar: nombre</option></select>
+      <span class="muted" style="margin-left:auto">${datos.length} clientes · ${eur(tot)}</span>
+      <button class="primary" id="bNuevo">+ Nuevo cliente</button></div></div>
+    <div class="cli-gallery">${cards}</div>`;
+  document.querySelectorAll('.ccard').forEach(e=>e.onclick=()=>{ SEL=e.dataset.pid; NUEVO=false; renderClientes(); });
   $('bNuevo').onclick=()=>{ NUEVO=true; SEL=null; renderClientes(); };
-  const bb=$('buscar'); bb.oninput=()=>{ FILTRO=bb.value; const ff=FILTRO.toLowerCase(); document.querySelectorAll('.item').forEach(el=>{ el.style.display=nom(st.personas[el.dataset.pid]).toLowerCase().includes(ff)?'':'none'; }); };
-  if(NUEVO) renderFichaNueva(); else renderFicha();
+  $('cliord').onchange=e=>{ CLIORD=e.target.value; renderClientes(); };
+  const bb=$('buscar'); bb.oninput=()=>{ FILTRO=bb.value; const ff=FILTRO.toLowerCase(); document.querySelectorAll('.ccard').forEach(el=>{ el.style.display=nom(st.personas[el.dataset.pid]).toLowerCase().includes(ff)?'':'none'; }); };
 }
 function renderFichaNueva(){
   $('ficha').innerHTML=`<h2>Nuevo cliente</h2>
