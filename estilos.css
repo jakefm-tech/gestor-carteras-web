@@ -254,3 +254,9 @@ th.num{text-align:right}
 #view .fldf label{font-size:11px;color:var(--gris)}
 #view .fldf input,#view .fldf select{width:100%;margin-top:0;background:#fff;border-color:var(--linea)}
 @media(max-width:620px){#view .grid2f{grid-template-columns:1fr}}
+#view .det-row{display:grid;grid-template-columns:1.6fr 1fr;gap:18px;align-items:center}
+@media(max-width:720px){#view .det-row{grid-template-columns:1fr}}
+#view .gestbox{border:1px dashed var(--linea);border-radius:9px;background:var(--beige,#EFEAE3);padding:12px;margin-top:16px}
+#view .back2{font-size:12.5px;color:var(--gris);cursor:pointer;margin-bottom:12px;display:inline-block}
+#view .back2:hover{color:var(--salmon-osc)}
+#view tr.tot td{font-weight:700;background:var(--salmon-pal,#F1E7E7)}

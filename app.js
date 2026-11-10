@@ -35,14 +35,14 @@ function pantallaConexion(hg){
 
 let TAB='panel';
 let CLIORD='pat';
-let FICHATAB='carteras';
+let FICHATAB='detalle';
+let DETMODE='ver';
 function entrar(){
   document.body.innerHTML=`<div class="top"><span class="brand">Gestor de Carteras</span><span class="user">Usuario: ${AUTOR} · datos en OneDrive</span></div>
     <div class="tabs">
       <div class="tab" data-t="panel">Panel</div>
       <div class="tab" data-t="analisis">Análisis</div>
       <div class="tab" data-t="clientes">Clientes</div>
-      <div class="tab" data-t="actualizar">Operaciones</div>
       <div class="tab" data-t="valores">Valores</div>
       <div class="tab" data-t="liquidativos">Liquidativos</div>
       <div class="tab" data-t="informes">Informes</div>
@@ -54,7 +54,7 @@ function entrar(){
 }
 function pintarTabs(){ document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.t===TAB)); }
 async function recargarYrender(){ try{ ESTADO=Libro.reconstruir(await Libro.cargarEventos(VAULT)); }catch(e){ ESTADO=Libro.reconstruir([]); } render(); }
-function render(){ ({panel:renderPanel,analisis:renderAnalisis,clientes:renderClientes,actualizar:renderActualizar,valores:renderValores,liquidativos:renderLiquidativos,informes:renderInformes,propuestas:renderPropuestas,simulador:renderSimulador}[TAB])(); }
+function render(){ ({panel:renderPanel,analisis:renderAnalisis,clientes:renderClientes,valores:renderValores,liquidativos:renderLiquidativos,informes:renderInformes,propuestas:renderPropuestas,simulador:renderSimulador}[TAB]||renderPanel)(); }
 
 // ---- helpers ----
 async function apuntar(l){ for(const [t,p] of l) await Libro.anexar(VAULT,AUTOR,t,p); }
@@ -374,7 +374,7 @@ function renderClientes(){
       <span class="muted" style="margin-left:auto">${datos.length} clientes · ${eur(tot)}</span>
       <button class="primary" id="bNuevo">+ Nuevo cliente</button></div></div>
     <div class="cli-gallery">${cards}</div>`;
-  document.querySelectorAll('.ccard').forEach(e=>e.onclick=()=>{ SEL=e.dataset.pid; NUEVO=false; FICHATAB='carteras'; renderClientes(); });
+  document.querySelectorAll('.ccard').forEach(e=>e.onclick=()=>{ SEL=e.dataset.pid; NUEVO=false; FICHATAB='detalle'; DETMODE='ver'; renderClientes(); });
   $('bNuevo').onclick=()=>{ NUEVO=true; SEL=null; renderClientes(); };
   $('cliord').onchange=e=>{ CLIORD=e.target.value; renderClientes(); };
   const bb=$('buscar'); bb.oninput=()=>{ FILTRO=bb.value; const ff=FILTRO.toLowerCase(); document.querySelectorAll('.ccard').forEach(el=>{ el.style.display=nom(st.personas[el.dataset.pid]).toLowerCase().includes(ff)?'':'none'; }); };
@@ -398,6 +398,7 @@ async function crearCliente(){
 }
 function renderFicha(){
   const st=ESTADO, c=$('ficha'); if(!SEL){ c.innerHTML=`<h2>Ficha</h2><p class="muted">Selecciona una persona de la galería.</p>`; return; }
+  SELCLI=SEL;
   const p=st.personas[SEL], otras=Object.values(st.personas).filter(x=>x.id!==SEL);
   const carts=cartsDe(st,SEL), patTot=carts.reduce((a,k)=>a+Libro.patrimonio(st,k.cid),0);
   const asesores=[...new Set(carts.map(k=>ASESORES[k.asesor||'AJ']||(k.asesor||'AJ')))].join(', ')||'—';
@@ -406,27 +407,8 @@ function renderFicha(){
       <div class="fldf"><label>Cuenta origen (IBAN en el bróker)</label><input id="fori" value="${esc(p.cuentaOrigen||'')}" placeholder="ES.."></div>
       <div class="fldf"><label>Banco destino</label><input id="fban" value="${esc(p.bancoDestino||'')}"></div>
       <div class="fldf"><label>IBAN destino</label><input id="fiban" value="${esc(p.ibanDestino||'')}" placeholder="ES.."></div></div>`;
-  // ---- Panel: Carteras ----
-  const cart=carts.map(k=>{
-    const t=titularesDe(st,k.cid);
-    const chips=t.map(pid=>`<span class="chip">${nom(st.personas[pid])}${pid!==SEL?` <button data-q="${k.cid}" data-p="${pid}">×</button>`:''}</span>`).join('');
-    const noT=otras.filter(x=>!t.includes(x.id));
-    const add=noT.length?`<select data-add="${k.cid}"><option value="">+ titular…</option>${noT.map(x=>`<option value="${x.id}">${nom(x)}</option>`).join('')}</select>`:'';
-    return `<div class="cartera"><div class="row"><input data-cn="${k.cid}" value="${esc(k.nombre)}" style="flex:1">
-      <select data-ct="${k.cid}"><option value="individual" ${k.tipo==='individual'?'selected':''}>Individual</option><option value="conjunta" ${k.tipo==='conjunta'?'selected':''}>Conjunta</option></select>
-      <select data-casr="${k.cid}" title="Asesor">${Object.keys(ASESORES).map(a=>`<option value="${a}" ${((k.asesor||'AJ')===a)?'selected':''}>${ASESORES[a]}</option>`).join('')}</select>
-      <button class="ghost" data-gc="${k.cid}">Guardar</button><b class="num" style="margin-left:auto">${eur(Libro.patrimonio(st,k.cid))}</b></div>
-      <div class="chips" style="margin-top:8px">${chips}</div>${add}
-      <div style="margin-top:6px"><button class="danger" data-baja="${k.cid}">Dar de baja</button>
-        <button class="danger" data-del="${k.cid}" style="margin-left:6px">Eliminar</button></div></div>`;}).join('')||'<p class="muted">Sin carteras. Crea una abajo.</p>';
-  const panelCarteras=`${cart}
-    <div style="margin-top:14px;border-top:1px solid var(--linea);padding-top:12px">
-      <div class="row"><input id="ncn" placeholder="Nombre nueva cartera" value="Cartera individual" style="flex:1"></div>
-      <p class="muted" style="margin:8px 0 4px">Otros titulares (marca para conjunta):</p>
-      <div class="chks">${otras.map(x=>`<label class="chk"><input type="checkbox" class="co" value="${x.id}"> ${nom(x)}</label>`).join('')||'<span class="muted">no hay más personas</span>'}</div>
-      <div class="row" style="margin-top:8px"><button class="primary" id="bNC">Crear cartera para ${p.nombre}</button></div></div>`;
-  // ---- Panel: Datos y cuentas ----
-  const panelDatos=`<div class="grid2f">
+  // ===== Información personal =====
+  const panelPersonal=`<div class="grid2f">
       <div class="fldf"><label>Nombre</label><input id="fn" value="${esc(p.nombre)}"></div>
       <div class="fldf"><label>Apellidos</label><input id="fa" value="${esc(p.apellidos)}"></div>
       <div class="fldf"><label>Email</label><input id="fe" value="${esc(p.email)}"></div>
@@ -434,33 +416,98 @@ function renderFicha(){
       <div class="fldf"><label>Idioma</label><select id="fi">${Object.entries(IDIOMAS).map(([k,v])=>`<option value="${k}" ${(p.idioma||'es')===k?'selected':''}>${v}</option>`).join('')}</select></div></div>
     <div style="margin-top:12px;border-top:1px solid var(--linea);padding-top:10px"><div class="muted" style="font-size:11.5px;margin-bottom:6px">Datos para la carta de transferencia</div>${cuentas}</div>
     <div class="row" style="margin-top:12px"><button class="primary" id="bF">Guardar ficha</button><span class="muted" id="fm"></span></div>`;
-  // ---- Panel: Transferencia R4 ----
-  const panelTransf=`<p class="muted" style="margin:-2px 0 10px">Carta de transferencia a Renta 4. Puedes editar el DNI y las cuentas solo para esta carta; para guardarlos en la ficha, ve a «Datos y cuentas».</p>
+  // ===== Solicitud de transferencia =====
+  const panelTransf=`<p class="muted" style="margin:-2px 0 10px">Carta de transferencia a Renta 4. Puedes editar el DNI y las cuentas solo para esta carta; para guardarlos, ve a «Información personal».</p>
     ${cuentas}
     <div class="row" style="margin-top:12px"><label class="chk">Fecha <input id="tfecha" type="date" value="2026-08-31"></label><input id="timp" placeholder="Importe (€)" inputmode="decimal" style="max-width:160px"></div>
     <div class="row" style="margin-top:8px"><label class="chk">Cartera <select id="tcart">${carts.map(k=>`<option value="${k.cid}">${esc(k.nombre)}</option>`).join('')||'<option value="">(sin cartera)</option>'}</select></label><label class="chk"><input type="checkbox" id="tdisp" checked> registrar como Disposición (concilia el patrimonio)</label></div>
     <div class="row" style="margin-top:10px"><button class="primary" id="bCarta">Generar Word</button><span class="muted" id="tmsg"></span></div>`;
-  const panel = FICHATAB==='datos'?panelDatos : FICHATAB==='transferencia'?panelTransf : panelCarteras;
+  // ===== Detalle cartera =====
+  let panelDetalle;
+  if(DETMODE==='gestionar'){
+    const cart=carts.map(k=>{
+      const t=titularesDe(st,k.cid);
+      const chips=t.map(pid=>`<span class="chip">${nom(st.personas[pid])}${pid!==SEL?` <button data-q="${k.cid}" data-p="${pid}">×</button>`:''}</span>`).join('');
+      const noT=otras.filter(x=>!t.includes(x.id));
+      const add=noT.length?`<select data-add="${k.cid}"><option value="">+ titular…</option>${noT.map(x=>`<option value="${x.id}">${nom(x)}</option>`).join('')}</select>`:'';
+      return `<div class="cartera"><div class="row"><input data-cn="${k.cid}" value="${esc(k.nombre)}" style="flex:1">
+        <select data-ct="${k.cid}"><option value="individual" ${k.tipo==='individual'?'selected':''}>Individual</option><option value="conjunta" ${k.tipo==='conjunta'?'selected':''}>Conjunta</option></select>
+        <select data-casr="${k.cid}" title="Asesor">${Object.keys(ASESORES).map(a=>`<option value="${a}" ${((k.asesor||'AJ')===a)?'selected':''}>${ASESORES[a]}</option>`).join('')}</select>
+        <button class="ghost" data-gc="${k.cid}">Guardar</button><b class="num" style="margin-left:auto">${eur(Libro.patrimonio(st,k.cid))}</b></div>
+        <div class="chips" style="margin-top:8px">${chips}</div>${add}
+        <div style="margin-top:6px"><button class="danger" data-baja="${k.cid}">Dar de baja</button>
+          <button class="danger" data-del="${k.cid}" style="margin-left:6px">Eliminar</button></div></div>`;}).join('')||'<p class="muted">Sin carteras.</p>';
+    panelDetalle=`<div class="back2" id="bVolverDet">← Volver al detalle</div>${cart}
+      <div class="gestbox"><div class="muted" style="font-size:11.5px;margin-bottom:6px"><b>Nueva cartera</b> para ${p.nombre}</div>
+        <div class="row"><input id="ncn" placeholder="Nombre" value="Cartera individual" style="flex:1"></div>
+        <p class="muted" style="margin:8px 0 4px">Otros titulares (marca para conjunta):</p>
+        <div class="chks">${otras.map(x=>`<label class="chk"><input type="checkbox" class="co" value="${x.id}"> ${nom(x)}</label>`).join('')||'<span class="muted">no hay más personas</span>'}</div>
+        <div class="row" style="margin-top:8px"><button class="primary" id="bNC">Crear cartera</button></div></div>`;
+  } else if(DETMODE==='operar'){
+    if(!SELC || !carts.some(k=>k.cid===SELC)) SELC=carts[0]?carts[0].cid:null;
+    const insts=Object.entries(st.instrumentos).filter(([id,i])=>i&&i.nombre).sort((a,b)=>(a[1].nombre||'').localeCompare(b[1].nombre||''));
+    panelDetalle=`<div class="back2" id="bVolverDet">← Volver al detalle</div>
+      <div class="row" style="margin-bottom:10px"><label class="chk">Cartera <select id="selc">${carts.map(k=>`<option value="${k.cid}" ${k.cid===SELC?'selected':''}>${esc(k.nombre)}</option>`).join('')||'<option value="">(sin cartera)</option>'}</select></label></div>
+      <div class="grid2f">
+        <div class="fldf"><label>Tipo</label><select id="mt">${TIPOS_MOV.map(t=>`<option>${t}</option>`).join('')}</select></div>
+        <div class="fldf" id="fInst"><label>Instrumento</label><select id="mi"><option value="">— Selecciona —</option>${insts.map(([id,i])=>`<option value="${id}">${i.nombre}</option>`).join('')}<option value="__n">+ Nuevo…</option></select></div>
+        <div class="fldf"><label>Importe (€)</label><input id="mimp" inputmode="decimal"></div>
+        <div class="fldf" id="fPre"><label>VL de compra</label><input id="mpre" inputmode="decimal"></div>
+        <div class="fldf"><label>Fecha</label><input id="mf" type="date" value="2026-08-31"></div></div>
+      <div id="fNew" style="display:none;margin-top:8px"><input id="mnew" placeholder="Instrumento nuevo"><input id="mnewisin" placeholder="ISIN (opcional)" style="margin-top:6px"></div>
+      <div class="err" id="me"></div>
+      <button class="primary" id="bMov">Guardar movimiento</button>`;
+  } else {
+    const posMap={}; let liq=0;
+    for(const k of carts){ liq+=st.liquidez[k.cid]||0; for(const [key,t] of Object.entries(st.posiciones)){ const [cc,ii]=key.split('|'); if(cc!==k.cid||Math.abs(t)<1e-8)continue; posMap[ii]=(posMap[ii]||0)+t; } }
+    const t4=x=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:4}).format(x);
+    const rows=Object.entries(posMap).map(([ii,t])=>{ const vl=vlUlt(st,ii), valor=vl?t*vl/fxOf(st,ii):null; return {nombre:(st.instrumentos[ii]||{}).nombre||'—',t,vl,valor}; }).filter(r=>r.valor!=null).sort((a,b)=>b.valor-a.valor);
+    const patF=rows.reduce((a,r)=>a+r.valor,0), patTotD=patF+liq;
+    const segs=rows.map(r=>({n:r.nombre,v:r.valor})); if(liq>0.5) segs.push({n:'Liquidez',v:liq});
+    const trs=rows.map(r=>`<tr><td>${r.nombre}</td><td class="num">${t4(r.t)}</td><td class="num">${r.vl?t4(r.vl):'—'}</td><td class="num">${eur(r.valor)}</td><td class="num">${pct(r.valor/(patTotD||1))}</td></tr>`).join('')
+      +(liq>0.5?`<tr><td>Liquidez</td><td class="num">—</td><td class="num">—</td><td class="num">${eur(liq)}</td><td class="num">${pct(liq/(patTotD||1))}</td></tr>`:'')
+      +`<tr class="tot"><td>Total</td><td class="num">—</td><td class="num">—</td><td class="num">${eur(patTotD)}</td><td class="num">100 %</td></tr>`;
+    panelDetalle=`<div class="det-row"><div><table><thead><tr><th>Fondo</th><th class="num">Títulos</th><th class="num">VL</th><th class="num">Valor</th><th class="num">Peso</th></tr></thead><tbody>${trs||'<tr><td colspan="5" class="muted">Sin posiciones.</td></tr>'}</tbody></table></div>
+      <div class="hero-donut">${segs.length?donutSVG(segs):'<span class="muted">—</span>'}</div></div>
+      <div class="gestbox"><div class="muted" style="font-size:11.5px;margin-bottom:8px"><b>Administración</b> — operaciones y carteras de ${p.nombre}.</div>
+        <button class="ghost" id="bOperar">Registrar operación</button> <button class="ghost" id="bGestionar">Gestionar carteras</button></div>`;
+  }
+  // ===== Informe =====
+  const minF=(()=>{let m='';for(const i in st.vl)for(const f in st.vl[i])if(!m||f<m)m=f;return m;})();
+  const maxF=(()=>{let m='';for(const i in st.vl)for(const f in st.vl[i])if(f>m)m=f;return m;})();
+  const panelInforme=`<p class="muted" style="margin:0 0 10px">Informe de ${p.nombre} a la fecha que elijas (vacío = último cierre). Usa los VL del maestro de liquidativos.</p>
+    <div class="row no-print" style="margin-bottom:8px"><span class="muted">Carteras:</span> ${carts.map(k=>`<label class="chk"><input type="checkbox" class="icart" value="${k.cid}" checked> ${esc(k.nombre)}</label>`).join('')||'<span class="muted">sin carteras</span>'}
+      <label class="chk">Fecha <input id="ifecha" type="date" value="${SELFECHA||''}" min="${minF}" max="${maxF}" style="background:#fff;border-color:var(--linea)"></label>
+      <button class="primary" id="bGen">Generar</button><button class="ghost" id="bPdf" style="margin-left:auto">Exportar a PDF</button></div>
+    <div id="doc"></div>`;
+  const panel = FICHATAB==='personal'?panelPersonal : FICHATAB==='transf'?panelTransf : FICHATAB==='informe'?panelInforme : panelDetalle;
   const ini=(((p.nombre||'')[0]||'')+((p.apellidos||'')[0]||'')||'?').toUpperCase();
   c.innerHTML=`<div class="ficha-head">
       <div class="av">${ini}</div>
       <div style="flex:1"><div class="ph1" style="font-size:18px;margin:0">${nom(p)}</div><div class="sub" style="margin:0">${carts.length} cartera${carts.length===1?'':'s'} · ${eur(patTot)} · ${asesores}</div></div>
       <button class="danger" id="bDP">Eliminar cliente…</button></div>
     <div class="ftabs">
-      <div class="ftab ${FICHATAB==='carteras'?'on':''}" data-ft="carteras">Carteras</div>
-      <div class="ftab ${FICHATAB==='datos'?'on':''}" data-ft="datos">Datos y cuentas</div>
-      <div class="ftab ${FICHATAB==='transferencia'?'on':''}" data-ft="transferencia">Transferencia R4</div></div>
+      <div class="ftab ${FICHATAB==='personal'?'on':''}" data-ft="personal">Información personal</div>
+      <div class="ftab ${FICHATAB==='transf'?'on':''}" data-ft="transf">Solicitud de transferencia</div>
+      <div class="ftab ${FICHATAB==='detalle'?'on':''}" data-ft="detalle">Detalle cartera</div>
+      <div class="ftab ${FICHATAB==='informe'?'on':''}" data-ft="informe">Informe</div></div>
     <div>${panel}</div>`;
   $('bDP').onclick=()=>borrarPersona(SEL);
-  c.querySelectorAll('[data-ft]').forEach(t=>t.onclick=()=>{ FICHATAB=t.dataset.ft; renderFicha(); });
+  c.querySelectorAll('[data-ft]').forEach(t=>t.onclick=()=>{ FICHATAB=t.dataset.ft; DETMODE='ver'; renderFicha(); });
   if($('bF')) $('bF').onclick=guardarFicha;
-  if($('bNC')) $('bNC').onclick=nuevaCartera;
   if($('bCarta')) $('bCarta').onclick=generarCarta;
+  if($('bVolverDet')) $('bVolverDet').onclick=()=>{ DETMODE='ver'; renderFicha(); };
+  if($('bOperar')) $('bOperar').onclick=()=>{ DETMODE='operar'; renderFicha(); };
+  if($('bGestionar')) $('bGestionar').onclick=()=>{ DETMODE='gestionar'; renderFicha(); };
+  if($('bNC')) $('bNC').onclick=nuevaCartera;
+  if($('bMov')){ $('bMov').onclick=guardarMov; const sc=$('selc'); if(sc) sc.onchange=e=>{ SELC=e.target.value; };
+    const t=$('mt'); if(t){ const usaF=()=>['Compra','Venta'].includes($('mt').value); const sync=()=>{ if($('fInst'))$('fInst').style.display=usaF()?'':'none'; if($('fPre'))$('fPre').style.display=usaF()?'':'none'; if($('fNew'))$('fNew').style.display=(usaF()&&$('mi')&&$('mi').value==='__n')?'':'none'; }; t.onchange=sync; if($('mi'))$('mi').onchange=sync; sync(); } }
   c.querySelectorAll('[data-gc]').forEach(b=>b.onclick=()=>guardarCartera(b.dataset.gc));
   c.querySelectorAll('[data-baja]').forEach(b=>b.onclick=()=>bajaCartera(b.dataset.baja));
   c.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>borrarCartera(b.dataset.del));
   c.querySelectorAll('[data-add]').forEach(s=>s.onchange=()=>{ if(s.value) addTitular(s.dataset.add,s.value); });
   c.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>quitaTitular(b.dataset.q,b.dataset.p));
+  if(FICHATAB==='informe'){ $('bGen').onclick=()=>{ SELFECHA=($('ifecha').value||''); genInforme(); }; $('bPdf').onclick=()=>window.print(); genInforme(); }
 }
 async function altaPersona(){ const n=$('nom').value.trim(); if(!n) return; const a=$('ape').value.trim(); const pid=crypto.randomUUID();
   const l=[['alta_persona',{id:pid,nombre:n,apellidos:a,email:'',telefono:'',idioma:'es'}]];
