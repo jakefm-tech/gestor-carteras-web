@@ -218,3 +218,12 @@ th.num{text-align:right}
 #view .cbar{height:6px;border-radius:3px;background:#ece6e6;overflow:hidden;margin-top:4px}
 #view .cbar span{display:block;height:100%;background:#8E7577;border-radius:3px}
 @media(max-width:820px){#view .ana-row2,#view .ana-rowB,#view .kstrip{grid-template-columns:1fr}}
+
+/* ===================== LIQUIDATIVOS ===================== */
+#view .liqmat{border-collapse:separate;border-spacing:0}
+#view .liqmat th,#view .liqmat td{padding:5px 8px;white-space:nowrap;border-bottom:1px solid #F0EAEA}
+#view .liqmat thead th{background:var(--blanco-roto);position:sticky;top:0}
+#view .liqmat th:first-child,#view .liqmat td:first-child{position:sticky;left:0;background:#fff;text-align:left;z-index:2;box-shadow:1px 0 0 var(--linea)}
+#view .liqmat thead th:first-child{z-index:3}
+#view input.liqgap{background:var(--amarillo)!important;border-color:var(--amarillo-b)!important}
+#view input.liqgap::placeholder{color:#9a7d1f}

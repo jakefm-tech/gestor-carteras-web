@@ -42,6 +42,7 @@ function entrar(){
       <div class="tab" data-t="clientes">Clientes</div>
       <div class="tab" data-t="actualizar">Operaciones</div>
       <div class="tab" data-t="valores">Valores</div>
+      <div class="tab" data-t="liquidativos">Liquidativos</div>
       <div class="tab" data-t="informes">Informes</div>
       <div class="tab" data-t="propuestas">Propuestas</div>
       <div class="tab" data-t="simulador">Simulador</div>
@@ -51,7 +52,7 @@ function entrar(){
 }
 function pintarTabs(){ document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.t===TAB)); }
 async function recargarYrender(){ try{ ESTADO=Libro.reconstruir(await Libro.cargarEventos(VAULT)); }catch(e){ ESTADO=Libro.reconstruir([]); } render(); }
-function render(){ ({panel:renderPanel,analisis:renderAnalisis,clientes:renderClientes,actualizar:renderActualizar,valores:renderValores,informes:renderInformes,propuestas:renderPropuestas,simulador:renderSimulador}[TAB])(); }
+function render(){ ({panel:renderPanel,analisis:renderAnalisis,clientes:renderClientes,actualizar:renderActualizar,valores:renderValores,liquidativos:renderLiquidativos,informes:renderInformes,propuestas:renderPropuestas,simulador:renderSimulador}[TAB])(); }
 
 // ---- helpers ----
 async function apuntar(l){ for(const [t,p] of l) await Libro.anexar(VAULT,AUTOR,t,p); }
@@ -109,14 +110,18 @@ function renderPanel(){
   const rentsA=Object.keys(yrs).sort().map(a=>yrs[a].ini?yrs[a].res/yrs[a].ini:0);
   const volA=rentsA.length?stdev(rentsA):null, ddA=rentsA.length?maxDD(rentsA):null;
   const svc=(st.svc&&st.svc.clientes)?Object.values(st.svc.clientes):[];
-  // Mes de cierre (último VL registrado), para separar flujo del año y del mes
+  // Mes de cierre (último VL) y mes natural actual: el flujo "del mes" mira el mes en curso
   let _cierre=''; for(const i in st.vl)for(const f in st.vl[i])if(f>_cierre)_cierre=f; const cierreMes=_cierre.slice(0,7);
-  // Flujo desde las carteras: aportaciones (efectivo>0) y disposiciones (efectivo<0) registradas como movimientos (excluye asesores externos)
+  const mesActual=new Date().toISOString().slice(0,7);
+  const MESNOM=['','enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const mesActualNom=(MESNOM[+mesActual.slice(5)]||'')+' '+mesActual.slice(0,4);
+  // Serie mensual de captaciones (cap) y salidas (sal) para el cuadro de evolución
+  const flujoMes={}; const addFlujo=(mm,ap)=>{ if(!mm)return; const o=flujoMes[mm]||(flujoMes[mm]={cap:0,sal:0}); if(ap>0)o.cap+=ap; else o.sal+=ap; };
   let apAnioC=0,reAnioC=0,apMesC=0,reMesC=0;
-  for(const m of st.movimientos){ if(esExterna(st,m.cartera)) continue; const tp=(m.tipo||'').toLowerCase(), e=m.efectivo_delta||0, f=m.fecha||''; const esAp=(tp==='aportación'||tp==='aportacion')&&e>0, esRe=(tp==='disposición'||tp==='disposicion')&&e<0; if(!esAp&&!esRe) continue; if(f>='2026-01-01'){ if(esAp)apAnioC+=e; else reAnioC+=e; } if(f.slice(0,7)===cierreMes){ if(esAp)apMesC+=e; else reMesC+=e; } }
+  for(const m of st.movimientos){ if(esExterna(st,m.cartera)) continue; const tp=(m.tipo||'').toLowerCase(), e=m.efectivo_delta||0, f=m.fecha||''; const esAp=(tp==='aportación'||tp==='aportacion')&&e>0, esRe=(tp==='disposición'||tp==='disposicion')&&e<0; if(!esAp&&!esRe) continue; addFlujo(f.slice(0,7),e); if(f>='2026-01-01'){ if(esAp)apAnioC+=e; else reAnioC+=e; } if(f.slice(0,7)===mesActual){ if(esAp)apMesC+=e; else reMesC+=e; } }
   // Los servicios (Wealth/Gestión) llevan la fecha del seguimiento: se clasifican en año y mes igual que los movimientos
   let svcApA=0,svcReA=0,svcApM=0,svcReM=0;
-  for(const c of svc){ const ap=+c.aportaciones||0; if(!ap) continue; const f=c.fecha||''; const enAnio=!f||f>='2026-01-01', enMes=f.slice(0,7)===cierreMes; if(ap>0){ if(enAnio)svcApA+=ap; if(enMes)svcApM+=ap; } else { if(enAnio)svcReA+=ap; if(enMes)svcReM+=ap; } }
+  for(const c of svc){ const ap=+c.aportaciones||0; if(!ap) continue; const f=c.fecha||''; addFlujo(f.slice(0,7),ap); const enAnio=!f||f>='2026-01-01', enMes=f.slice(0,7)===mesActual; if(ap>0){ if(enAnio)svcApA+=ap; if(enMes)svcApM+=ap; } else { if(enAnio)svcReA+=ap; if(enMes)svcReM+=ap; } }
   const dineroNuevoAnio=svcApA+apAnioC, retiradasAnio=svcReA+reAnioC;
   const dineroNuevoMes=svcApM+apMesC, retiradasMes=svcReM+reMesC;
   const dineroNuevo=dineroNuevoAnio, retiradas=retiradasAnio;
@@ -159,7 +164,7 @@ function renderPanel(){
       </div></div>
     <div class="card"><h2>Flujos de clientes</h2>
       <div class="flow">
-        <div class="flowcol mes"><div class="hd"><span>ESTE MES</span><span class="t">${cierreMes||'—'}</span></div>
+        <div class="flowcol mes"><div class="hd"><span>ESTE MES</span><span class="t">${mesActualNom}</span></div>
           <div class="frow"><span class="lab">▲ Dinero nuevo</span><span class="val pos">${dineroNuevoMes?'+'+eur(dineroNuevoMes):'—'}</span></div>
           <div class="frow"><span class="lab">▼ Retiradas</span><span class="val neg">${retiradasMes?eur(retiradasMes):'—'}</span></div>
           <div class="frow net"><span class="lab">Flujo neto</span><span class="val">${(dineroNuevoMes+retiradasMes)?(((dineroNuevoMes+retiradasMes)>0?'+':'')+eur(dineroNuevoMes+retiradasMes)):'—'}</span></div>
@@ -170,7 +175,10 @@ function renderPanel(){
           <div class="frow net"><span class="lab">Flujo neto</span><span class="val">${(dineroNuevoAnio+retiradasAnio)?(((dineroNuevoAnio+retiradasAnio)>0?'+':'')+eur(dineroNuevoAnio+retiradasAnio)):'—'}</span></div>
         </div>
       </div>
-      <p class="muted" style="margin-top:10px;font-size:11.5px">Cada aportación y retirada se clasifica por su fecha: el bloque <b>mes</b> recoge lo fechado en el cierre (${cierreMes||'—'}); el bloque <b>año</b>, todo 2026. Asset se calcula en vivo desde la app.</p></div>
+      <p class="muted" style="margin-top:10px;font-size:11.5px">Cada aportación y retirada se clasifica por su fecha: el bloque <b>mes</b> recoge lo fechado en el mes en curso (${mesActualNom}); el bloque <b>año</b>, todo 2026. Asset se calcula en vivo desde la app.</p></div>
+    <div class="card"><h2>Captaciones y salidas · mes a mes</h2>
+      <p class="muted" style="margin-top:-6px;margin-bottom:8px">Dinero nuevo (verde) y retiradas (rojo) de cada mes de 2026. Faltan cierres por cargar; se completará al subir los movimientos mensuales.</p>
+      ${flujoBarSVG(flujoMes)}</div>
     <div class="card"><h2>Patrimonio por servicio</h2>
       <div style="overflow-x:auto"><table><thead><tr><th>Servicio</th><th class="num">Patrimonio</th><th class="num">Peso</th><th class="num">Clientes</th><th class="num">Rent. 2026</th><th class="num">Var. mes</th><th class="num">Medio/cliente</th><th class="num">A fecha</th></tr></thead>
         <tbody>${filas.map(f=>`<tr><td>${f.n}</td><td class="num">${eur(f.pat)}</td><td class="num">${pct(f.pat/total)}</td><td class="num">${f.cli}</td><td class="num">${f.rent!=null?pct(f.rent):'—'}</td><td class="num">${f.varm!=null?pct(f.varm):'—'}</td><td class="num">${medio(f)}</td><td class="num" style="font-size:11px;color:var(--gris)">${f.fecha}</td></tr>`).join('')}
@@ -205,6 +213,24 @@ function donutSVG(segs){const tot=segs.reduce((s,x)=>s+x.v,0)||1,r=78,C=2*Math.P
   segs.forEach((sg,i)=>{const d=sg.v/tot*C;g+=`<circle cx="100" cy="100" r="${r}" fill="none" stroke="${col[i%col.length]}" stroke-width="34" stroke-dasharray="${d} ${C-d}" stroke-dashoffset="${-off}" transform="rotate(-90 100 100)"/>`;off+=d;});
   const leg=segs.map((sg,i)=>`<div class="it"><span class="sw" style="background:${col[i%col.length]}"></span>${sg.n} <b>${pct(sg.v/tot)}</b></div>`).join('');
   return `<div class="donut"><svg viewBox="0 0 200 200" style="width:210px;flex:none">${g}</svg><div class="leg">${leg}</div></div>`;}
+function flujoBarSVG(fm){
+  const now=new Date(), yr=2026, meses=[];
+  for(let m=1;m<=12;m++){ if(new Date(yr,m-1,1)>now) break; meses.push(yr+'-'+String(m).padStart(2,'0')); }
+  const data=meses.map(k=>fm[k]||{cap:0,sal:0});
+  const maxV=Math.max(1,...data.map(d=>Math.max(d.cap,Math.abs(d.sal))));
+  const W=760,H=190,pL=12,pR=12,pT=16,pB=26, half=(H-pT-pB)/2, mid=pT+half;
+  const step=(W-pL-pR)/(meses.length||1), bw=Math.min(30,step*0.46);
+  const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const fmt=v=>(v>=0?'+':'−')+Math.round(Math.abs(v)/1000)+'k';
+  let g=`<line x1="${pL}" y1="${mid}" x2="${W-pR}" y2="${mid}" stroke="#D9CFCF"/>`;
+  data.forEach((d,i)=>{ const cx=pL+i*step+step/2;
+    if(d.cap>0){ const h=half*d.cap/maxV; g+=`<rect x="${cx-bw/2}" y="${mid-h}" width="${bw}" height="${Math.max(1,h)}" rx="2" fill="#3F7A5B"/><text x="${cx}" y="${mid-h-3}" text-anchor="middle" font-size="8" font-weight="700" fill="#3F7A5B">${fmt(d.cap)}</text>`; }
+    if(d.sal<0){ const h=half*Math.abs(d.sal)/maxV; g+=`<rect x="${cx-bw/2}" y="${mid}" width="${bw}" height="${Math.max(1,h)}" rx="2" fill="#A2453B"/><text x="${cx}" y="${mid+h+11}" text-anchor="middle" font-size="8" font-weight="700" fill="#A2453B">${fmt(d.sal)}</text>`; }
+    g+=`<text x="${cx}" y="${H-8}" text-anchor="middle" font-size="9" fill="#575755">${MES[+meses[i].slice(5)-1]||''}</text>`;
+  });
+  const leg=`<div style="display:flex;gap:18px;justify-content:center;font-size:11.5px;margin-top:2px"><span style="color:#3F7A5B">■ Captado</span><span style="color:#A2453B">■ Salido</span></div>`;
+  return `<div class="chart" style="height:200px"><svg viewBox="0 0 ${W} ${H}" style="width:100%;height:100%">${g}</svg></div>${leg}`;
+}
 function renderAnalisis(){
   const st=ESTADO; const act=carterasInternas(st);
   const patCart=act.map(c=>({...c,pat:Libro.patrimonio(st,c.cid)}));
@@ -508,6 +534,50 @@ function renderValores(){
       <div class="row" style="margin-top:12px"><button class="primary" id="bISIN">Guardar</button><span class="muted" id="isinmsg"></span></div></div>`;
   $('bVLs').onclick=guardarVLs; if($('bISIN'))$('bISIN').onclick=guardarISIN; $('vfecha').value=finMesPrevio(new Date().toISOString().slice(0,10));
   document.querySelectorAll('[data-vl]').forEach(inp=>{ inp.oninput=()=>{ const a=parseFloat(inp.dataset.actual), v=pnum(inp.value); const cell=document.querySelector(`[data-var="${inp.dataset.vl}"]`); if(!cell)return; if(isNaN(v)||!a){ cell.textContent='—'; cell.style.color='var(--gris)'; cell.style.fontWeight='400'; return; } const d=v/a-1, big=Math.abs(d)>0.15; cell.textContent=(d>=0?'+':'')+(d*100).toFixed(1).replace('.',',')+' %'; cell.style.color=big?'#B0453B':'var(--gris)'; cell.style.fontWeight=big?'700':'400'; }; });
+}
+// ============ LIQUIDATIVOS (maestro de VL por fecha) ============
+let LIQEXTRA=[], LIQSOLOG=false;
+const GESIKEY=['gesiuris','cat patrimonis','horma','iurisfond','healthcare','patrimonial','regata','japan deep','koala','panda','annualcycles','good value','intelligent data','balanced euro','euro equities','multigestion','mixto int','desarrollo sostenible'];
+const esGesiuris=n=>{ n=(n||'').toLowerCase(); return GESIKEY.some(k=>n.includes(k)); };
+function renderLiquidativos(){
+  const st=ESTADO;
+  let insts=Object.entries(st.instrumentos).filter(([id,i])=>i&&i.nombre);
+  if(LIQSOLOG) insts=insts.filter(([id,i])=>esGesiuris(i.nombre));
+  insts.sort((a,b)=>(a[1].nombre||'').localeCompare(b[1].nombre||''));
+  const dset=new Set(LIQEXTRA);
+  for(const [id] of insts){ const m=st.vl[id]||{}; for(const f in m) dset.add(f); }
+  const fechas=[...dset].sort();
+  const fmtVL=x=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:6}).format(x);
+  const dcol=f=>f.slice(8,10)+'/'+f.slice(5,7)+'/'+f.slice(2,4);
+  const hoy=new Date().toISOString().slice(0,10);
+  const rows=insts.map(([id,i])=>{
+    const m=st.vl[id]||{};
+    const cells=fechas.map(f=>{ const v=m[f], falta=(v==null); return `<td class="num"><input data-li="${id}" data-f="${f}" value="${v!=null?String(v).replace('.',','):''}" placeholder="—" class="${falta?'liqgap':''}" inputmode="decimal" style="width:92px;text-align:right;background:#fff;border-color:var(--linea)"></td>`; }).join('');
+    const uf=vlUltF(st,id);
+    return `<tr><td>${i.nombre}</td>${cells}<td class="num muted">${uf?fmtVL(uf[1])+' · '+uf[0].slice(8,10)+'/'+uf[0].slice(5,7):'—'}</td></tr>`;
+  }).join('');
+  $('view').innerHTML=`<h1>Maestro de liquidativos</h1>
+    <p class="muted" style="margin:0 0 12px">Histórico de VL por fondo y fecha. Es la fuente de los informes a fecha: cada informe valora con el último VL con fecha igual o anterior a la elegida.</p>
+    <div class="card"><div class="row" style="align-items:center;gap:14px;flex-wrap:wrap">
+      <label class="chk">Fecha de referencia (informes) <input id="liqref" type="date" value="${SELFECHA||''}" style="background:#fff;border-color:var(--linea)"></label>
+      <label class="chk">Añadir fecha <input id="liqnew" type="date" value="${hoy}" style="background:#fff;border-color:var(--linea)"></label>
+      <button class="ghost" id="bLiqAdd">+ Columna</button>
+      <label class="chk" style="margin-left:auto"><input type="checkbox" id="liqsolog" ${LIQSOLOG?'checked':''}> Solo fondos Gesiuris</label></div>
+      <p class="muted" style="margin:8px 0 0;font-size:11.5px">Las celdas en ámbar faltan: a esa fecha el informe tomaría el VL anterior. Añade una fecha puntual (hoy, intra-mes) y rellena solo los fondos que necesites.</p></div>
+    <div class="card"><div style="overflow:auto;max-height:62vh"><table class="liqmat"><thead><tr><th>Fondo</th>${fechas.map(f=>`<th class="num">${dcol(f)}</th>`).join('')}<th class="num">Último</th></tr></thead>
+      <tbody>${rows||'<tr><td class="muted">Sin fondos.</td></tr>'}</tbody></table></div>
+      <div class="row" style="margin-top:12px"><button class="primary" id="bLiqSave">Guardar liquidativos</button><span class="muted" id="liqmsg"></span></div></div>`;
+  $('bLiqAdd').onclick=()=>{ const f=$('liqnew').value; if(f && !LIQEXTRA.includes(f)){ LIQEXTRA.push(f); renderLiquidativos(); } };
+  $('liqsolog').onchange=e=>{ LIQSOLOG=e.target.checked; renderLiquidativos(); };
+  $('liqref').onchange=e=>{ SELFECHA=e.target.value; };
+  $('bLiqSave').onclick=guardarLiq;
+  document.querySelectorAll('[data-li]').forEach(inp=>{ inp.oninput=()=>{ inp.classList.toggle('liqgap', !inp.value.trim()); }; });
+}
+async function guardarLiq(){
+  const st=ESTADO, ev=[], m=$('liqmsg'); if(m)m.textContent='';
+  document.querySelectorAll('[data-li]').forEach(inp=>{ const v=pnum(inp.value); if(isNaN(v)||v<=0) return; const id=inp.dataset.li, f=inp.dataset.f, cur=(st.vl[id]||{})[f]; if(cur==null || Math.abs(v-cur)>1e-9) ev.push(['vl',{instrumento:id,fecha:f,valor:v}]); });
+  if(!ev.length){ if(m)m.textContent='Sin cambios.'; return; }
+  await apuntar(ev); LIQEXTRA=[]; await recargarYrender(); if($('liqmsg'))$('liqmsg').textContent=ev.length+' VL guardados.';
 }
 // ============ INFORMES ============
 function pPROP(){ return window.PROP||(window.PROP={tipo:'asset',cliTipo:'exist',cli:'',fut:'',nif:'',edad:'',importe:'',tc:{},ti:{},sel:{},mercados:'',fundam:'',vista:'flujo'}); }
