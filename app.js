@@ -140,28 +140,41 @@ function renderPanel(){
   const listaGs=gs.map(c=>`<div class="r2"><span>${c.nombre}</span><b>${eur(c.patrimonio)}</b></div>`).join('');
   const medio=f=>f.cli?eur(f.pat/f.cli):'—';
   $('view').innerHTML=`<h1>Panel general</h1>
-    <div class="card"><h2>Resumen</h2>
-      <div class="kpis3">
-        <div class="mini"><div class="k">Patrimonio total (AUM)</div><div class="v">${eur(total)}</div></div>
-        <div class="mini"><div class="k">Clientes distintos</div><div class="v">${distinct}</div></div>
-        <div class="mini"><div class="k">Relaciones de servicio</div><div class="v">${relaciones}</div></div>
+    <div class="card">
+      <div class="hero">
+        <div>
+          <div class="aum">
+            <div class="k">Patrimonio total bajo seguimiento (AUM)</div>
+            <div class="v">${eur(total)}</div>
+            <div class="d">${((dineroNuevoAnio+retiradasAnio)>=0?'+':'')+eur(dineroNuevoAnio+retiradasAnio)} en el año · ${((dineroNuevoMes+retiradasMes)>=0?'+':'')+eur(dineroNuevoMes+retiradasMes)} en el mes</div>
+            <div class="x">${distinct} clientes distintos · ${relaciones} relaciones de servicio</div>
+          </div>
+          <div class="pills">
+            <div class="pill"><div class="n"><i style="background:#8E7577"></i>Asset</div><div class="v">${eur(assetPat)}</div><div class="w">${pct(assetPat/total)} · ${assetN} cli.</div></div>
+            <div class="pill"><div class="n"><i style="background:#E5D0D2"></i>Wealth</div><div class="v">${eur(sum(wl))}</div><div class="w">${pct(sum(wl)/total)} · ${wl.length} cli.</div></div>
+            <div class="pill"><div class="n"><i style="background:#575755"></i>Gestión</div><div class="v">${eur(sum(gs))}</div><div class="w">${pct(sum(gs)/total)} · ${gs.length} cli.</div></div>
+          </div>
+        </div>
+        <div class="hero-donut">${donutSVG(filas.filter(f=>f.pat>0).map(f=>({n:f.n.split(' ')[0],v:f.pat})))}</div>
+      </div></div>
+    <div class="card"><h2>Flujos de clientes</h2>
+      <div class="flow">
+        <div class="flowcol mes"><div class="hd"><span>ESTE MES</span><span class="t">${cierreMes||'—'}</span></div>
+          <div class="frow"><span class="lab">▲ Dinero nuevo</span><span class="val pos">${dineroNuevoMes?'+'+eur(dineroNuevoMes):'—'}</span></div>
+          <div class="frow"><span class="lab">▼ Retiradas</span><span class="val neg">${retiradasMes?eur(retiradasMes):'—'}</span></div>
+          <div class="frow net"><span class="lab">Flujo neto</span><span class="val">${(dineroNuevoMes+retiradasMes)?(((dineroNuevoMes+retiradasMes)>0?'+':'')+eur(dineroNuevoMes+retiradasMes)):'—'}</span></div>
+        </div>
+        <div class="flowcol anio"><div class="hd"><span>AÑO 2026</span><span class="t">acumulado</span></div>
+          <div class="frow"><span class="lab">▲ Dinero nuevo</span><span class="val pos">${dineroNuevoAnio?'+'+eur(dineroNuevoAnio):'—'}</span></div>
+          <div class="frow"><span class="lab">▼ Retiradas</span><span class="val neg">${retiradasAnio?eur(retiradasAnio):'—'}</span></div>
+          <div class="frow net"><span class="lab">Flujo neto</span><span class="val">${(dineroNuevoAnio+retiradasAnio)?(((dineroNuevoAnio+retiradasAnio)>0?'+':'')+eur(dineroNuevoAnio+retiradasAnio)):'—'}</span></div>
+        </div>
       </div>
-      <div class="kpis3" style="margin-top:10px">
-        <div class="mini"><div class="k">Dinero nuevo (año)</div><div class="v" style="color:#1F7A4C">${dineroNuevoAnio?'+'+eur(dineroNuevoAnio):'—'}</div></div>
-        <div class="mini"><div class="k">Retiradas (año)</div><div class="v" style="color:#B0453B">${retiradasAnio?eur(retiradasAnio):'—'}</div></div>
-        <div class="mini"><div class="k">Flujo neto (año)</div><div class="v">${(dineroNuevoAnio+retiradasAnio)?(dineroNuevoAnio+retiradasAnio>0?'+':'')+eur(dineroNuevoAnio+retiradasAnio):'—'}</div></div>
-      </div>
-      <div class="kpis3" style="margin-top:10px">
-        <div class="mini"><div class="k">Dinero nuevo (mes ${cierreMes||'—'})</div><div class="v" style="color:#1F7A4C">${dineroNuevoMes?'+'+eur(dineroNuevoMes):'—'}</div></div>
-        <div class="mini"><div class="k">Retiradas (mes)</div><div class="v" style="color:#B0453B">${retiradasMes?eur(retiradasMes):'—'}</div></div>
-        <div class="mini"><div class="k">Flujo neto (mes)</div><div class="v">${(dineroNuevoMes+retiradasMes)?(dineroNuevoMes+retiradasMes>0?'+':'')+eur(dineroNuevoMes+retiradasMes):'—'}</div></div>
-      </div>
-      <p class="muted" style="margin-top:10px;font-size:11.5px">Flujo del <b>año</b>: aportaciones y retiradas de 2026. Flujo del <b>mes</b>: las fechadas en el mes de cierre. Cada seguimiento y cada movimiento se clasifica por su fecha. Asset se calcula en vivo desde la app.</p></div>
+      <p class="muted" style="margin-top:10px;font-size:11.5px">Cada aportación y retirada se clasifica por su fecha: el bloque <b>mes</b> recoge lo fechado en el cierre (${cierreMes||'—'}); el bloque <b>año</b>, todo 2026. Asset se calcula en vivo desde la app.</p></div>
     <div class="card"><h2>Patrimonio por servicio</h2>
-      <div class="cols2" style="grid-template-columns:minmax(0,1fr) 296px;align-items:center;gap:22px"><div style="overflow-x:auto"><table><thead><tr><th>Servicio</th><th class="num">Patrimonio</th><th class="num">Peso</th><th class="num">Clientes</th><th class="num">Rent. 2026</th><th class="num">Var. mes</th><th class="num">Medio/cliente</th><th class="num">A fecha</th></tr></thead>
+      <div style="overflow-x:auto"><table><thead><tr><th>Servicio</th><th class="num">Patrimonio</th><th class="num">Peso</th><th class="num">Clientes</th><th class="num">Rent. 2026</th><th class="num">Var. mes</th><th class="num">Medio/cliente</th><th class="num">A fecha</th></tr></thead>
         <tbody>${filas.map(f=>`<tr><td>${f.n}</td><td class="num">${eur(f.pat)}</td><td class="num">${pct(f.pat/total)}</td><td class="num">${f.cli}</td><td class="num">${f.rent!=null?pct(f.rent):'—'}</td><td class="num">${f.varm!=null?pct(f.varm):'—'}</td><td class="num">${medio(f)}</td><td class="num" style="font-size:11px;color:var(--gris)">${f.fecha}</td></tr>`).join('')}
-        <tr class="tot"><td>Total</td><td class="num">${eur(total)}</td><td class="num">100,0 %</td><td class="num">${relaciones}</td><td></td><td></td><td></td><td></td></tr></tbody></table></div>
-      <div style="display:flex;justify-content:center">${donutSVG(filas.filter(f=>f.pat>0).map(f=>({n:f.n.split(' ')[0],v:f.pat})))}</div></div></div>
+        <tr class="tot"><td>Total</td><td class="num">${eur(total)}</td><td class="num">100,0 %</td><td class="num">${relaciones}</td><td></td><td></td><td></td><td></td></tr></tbody></table></div></div>
     <div class="card"><h2>Patrimonio por fondo / SICAV</h2>
       <p class="muted" style="margin-top:-6px;margin-bottom:8px">Importe en cada IIC por servicio. Asset desde las carteras; Wealth y Gestión de Carteras desde el detalle por fondo (se rellena al cargar el cierre).</p>
       <div style="overflow-x:auto"><table><thead><tr><th>Fondo / SICAV</th><th class="num">Asset</th><th class="num">Wealth</th><th class="num">Gestión Carteras</th><th class="num">Total</th></tr></thead>
@@ -211,37 +224,61 @@ function renderAnalisis(){
   const bookAnual=Object.keys(bookY).sort().map(a=>({a:+a,rent:bookY[a].ini?bookY[a].res/bookY[a].ini:0}));
   const rentsBook=bookAnual.map(y=>y.rent);
   const vol=stdev(rentsBook), dd=maxDD(rentsBook);
-  const half=Math.ceil(prod.length/2);
-  const tprod=arr=>`<table><thead><tr><th>Producto</th><th class="num">Valor</th><th class="num">Peso</th><th class="num">Carteras</th></tr></thead><tbody>${arr.map(p=>`<tr><td>${p.nombre}</td><td class="num">${eur(p.valor)}</td><td class="num">${pct(p.pct)}</td><td class="num">${p.n}</td></tr>`).join('')||'<tr><td colspan="4" class="muted">Sin datos.</td></tr>'}</tbody></table>`;
-  $('view').innerHTML=`<h1>Análisis de la cartera</h1>
-    <div class="card"><h2>Resumen</h2>
-      <div class="kpis3">
-        <div class="mini"><div class="k">Clientes</div><div class="v">${nClientes}</div></div>
-        <div class="mini"><div class="k">Carteras</div><div class="v">${act.length}</div></div>
-        <div class="mini"><div class="k">Patrimonio total</div><div class="v">${eur(patTotal)}</div></div>
-        <div class="mini"><div class="k">Liquidez</div><div class="v">${pct(liqTotal/patTotal)}</div></div>
-      </div>
-      <div class="kpis3" style="margin-top:12px">
-        <div class="mini"><div class="k">Patrimonio medio / cartera</div><div class="v" style="font-size:17px">${eur(patTotal/(act.length||1))}</div></div>
-        <div class="mini"><div class="k">Nº de productos</div><div class="v">${prod.length}</div></div>
-        <div class="mini"><div class="k">Peso 5 mayores clientes</div><div class="v" style="font-size:17px">${pct(top5pct)}</div></div>
-        <div class="mini"><div class="k">Mayor producto</div><div class="v" style="font-size:17px">${prod[0]?pct(prod[0].pct):'—'}</div></div>
-      </div></div>
-    <div class="card"><h2>Patrimonio por producto</h2>
-      <div class="cols2"><div>${tprod(prod.slice(0,half))}</div><div>${tprod(prod.slice(half))}</div></div>
-      <div style="display:flex;justify-content:center;gap:34px;margin:26px 0 4px;padding-top:22px;border-top:1px solid var(--linea)">${prod.length?donutSVG(prod.slice(0,8).map(p=>({n:p.nombre,v:p.valor}))):''}</div></div>
-    <div class="card"><h2>Riesgo (histórico anual del conjunto)</h2>
-      <div class="kpis3"><div class="mini"><div class="k">Volatilidad anual</div><div class="v" style="font-size:18px">${bookAnual.length?pct(vol):'—'}</div></div>
-        <div class="mini"><div class="k">Caída máxima</div><div class="v" style="font-size:18px">${bookAnual.length?pct(dd):'—'}</div></div>
-        <div class="mini"><div class="k">Mejor año</div><div class="v" style="font-size:18px">${bookAnual.length?pct(Math.max(...rentsBook)):'—'}</div></div>
-        <div class="mini"><div class="k">Peor año</div><div class="v" style="font-size:18px">${bookAnual.length?pct(Math.min(...rentsBook)):'—'}</div></div></div>
-      <div style="margin-top:10px">${bookAnual.length?barSVG(bookAnual.map(y=>y.a),rentsBook):'<span class="muted">Sin serie anual.</span>'}</div>
-      <div class="muted" style="margin-top:6px;font-size:11.5px">Volatilidad = desviación típica de las rentabilidades anuales. Caída máxima = mayor retroceso acumulado. La resolución mensual y el Sharpe llegan con los VL mensuales por fondo.</div></div>
-    <div class="card"><h2>Concentración</h2>
-      <p class="muted" style="margin:0 0 8px">Mayores clientes por patrimonio (las conjuntas se reparten entre sus titulares). El producto más pesado es ${prod[0]?`<b>${prod[0].nombre}</b> con ${pct(prod[0].pct)} del total`:'—'}.</p>
-      <table><thead><tr><th>Cliente</th><th class="num">Patrimonio</th><th class="num">% del total</th></tr></thead>
-        <tbody>${topCli.map(([pid,v])=>`<tr><td>${nom(st.personas[pid])}</td><td class="num">${eur(v)}</td><td class="num">${pct(v/patTotal)}</td></tr>`).join('')}</tbody></table>
-      <div class="avisos">Los ratios de riesgo histórico (volatilidad, caída máxima, rentabilidad en el tiempo, Sharpe) necesitan la serie mensual de cada cartera, que aún no está migrada. Es el siguiente paso.</div></div>`;
+  // Rentabilidad YTD por producto (último VL vs último VL de 2025)
+  const idPorNombre={}; for(const [id,i] of Object.entries(st.instrumentos)){ if(i&&i.nombre) idPorNombre[i.nombre]=id; }
+  const ytdProd=nombre=>{ const id=idPorNombre[nombre]; if(!id) return null; const m=st.vl[id]||{}; const ks=Object.keys(m).sort(); if(ks.length<2) return null; const prev=ks.filter(f=>f<='2025-12-31'); const base=prev.length?m[prev[prev.length-1]]:m[ks[0]], last=m[ks[ks.length-1]]; return (base&&last)?last/base-1:null; };
+  // Clase de activo por vocación del fondo (universo Gesiuris)
+  const UNIV={}; FONDOS_UNIVERSO.forEach(f=>{ UNIV[f.n.toUpperCase().replace(/[^A-Z0-9]/g,'')]=f.v; });
+  const claseDe=nombre=>{ const key=String(nombre).toUpperCase().replace(/[^A-Z0-9]/g,''); for(const k in UNIV){ if(k.length>6&&(key.includes(k)||k.includes(key))){ const v=UNIV[k]||''; if(v.startsWith('RV')) return 'Renta variable'; if(v.startsWith('RF')) return 'Renta fija'; return 'Mixtos / global'; } } return 'Sin clasificar'; };
+  const claseAgg={}; prod.forEach(p=>{ if(p.nombre==='Liquidez') return; const c=claseDe(p.nombre); claseAgg[c]=(claseAgg[c]||0)+p.valor; }); if(liqTotal>0.5) claseAgg['Liquidez']=(claseAgg['Liquidez']||0)+liqTotal;
+  const claseOrden=['Renta variable','Renta fija','Mixtos / global','Sin clasificar','Liquidez'];
+  const claseCol={'Renta variable':'#8E7577','Renta fija':'#B79A9C','Mixtos / global':'#C9B9BA','Sin clasificar':'#ddc8c9','Liquidez':'#E5D0D2'};
+  const claseTot=Object.values(claseAgg).reduce((a,b)=>a+b,0)||1;
+  const claseBars=claseOrden.filter(c=>claseAgg[c]>0.5).map(c=>`<div class="lab"><span>${c}</span><b>${pct(claseAgg[c]/claseTot)}</b></div><div class="abar"><span style="width:${(claseAgg[c]/claseTot*100).toFixed(1)}%;background:${claseCol[c]}"></span></div>`).join('');
+  // Donut de productos (top 6 + resto) sobre el patrimonio total
+  const dcol=['#8E7577','#E5D0D2','#575755','#B79A9C','#C9B9BA','#7d6a6b','#ddc8c9'];
+  const topProd=prod.slice(0,6), restoVal=prod.slice(6).reduce((a,p)=>a+p.valor,0);
+  const dsegs=topProd.map(p=>p.valor).concat(restoVal>0.5?[restoVal]:[]);
+  const Cc=2*Math.PI*78; let off=0; const dring=dsegs.map((v,i)=>{ const d=v/(patTotal||1)*Cc, s=`<circle cx="100" cy="100" r="78" fill="none" stroke="${dcol[i%dcol.length]}" stroke-width="32" stroke-dasharray="${d} ${Cc-d}" stroke-dashoffset="${-off}" transform="rotate(-90 100 100)"/>`; off+=d; return s; }).join('');
+  // Tabla de productos (top 9 + otros + total)
+  const topN=prod.slice(0,9), otros=prod.slice(9);
+  const otrosVal=otros.reduce((a,p)=>a+p.valor,0), otrosPct=otros.reduce((a,p)=>a+p.pct,0);
+  const ytdCell=r=>r==null?'<td class="num">—</td>':`<td class="num" style="color:${r>=0?'var(--ok)':'var(--error)'}">${(r>=0?'+':'')+pct(r)}</td>`;
+  const prodRows=topN.map((p,i)=>`<tr><td><span class="asw" style="background:${dcol[i%dcol.length]}"></span>${p.nombre}</td><td class="num">${eur(p.valor)}</td><td class="num">${pct(p.pct)}</td><td class="num">${p.n}</td>${ytdCell(ytdProd(p.nombre))}</tr>`).join('')
+    + (otros.length?`<tr><td>Otros (${otros.length} productos)</td><td class="num">${eur(otrosVal)}</td><td class="num">${pct(otrosPct)}</td><td class="num">—</td><td class="num">—</td></tr>`:'')
+    + `<tr class="tot"><td>Total</td><td class="num">${eur(patTotal)}</td><td class="num">100,0 %</td><td class="num">—</td><td class="num">—</td></tr>`;
+  $('view').innerHTML=`<div class="ana"><h1>Análisis de la cartera</h1>
+    <p class="muted" style="margin:0 0 12px">Detalle del libro Asset: productos, asignación, riesgo y concentración.</p>
+    <div class="card" style="margin-top:0"><div class="kstrip">
+      <div class="kbox"><div class="k">Clientes</div><div class="v">${nClientes}</div></div>
+      <div class="kbox"><div class="k">Carteras</div><div class="v">${act.length}</div></div>
+      <div class="kbox"><div class="k">Patrimonio</div><div class="v">${patTotal>=1e6?(patTotal/1e6).toLocaleString('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2})+' M€':eur(patTotal)}</div></div>
+      <div class="kbox"><div class="k">Liquidez</div><div class="v">${pct(liqTotal/patTotal)}</div></div>
+      <div class="kbox"><div class="k">Medio/cartera</div><div class="v">${(patTotal/(act.length||1)/1000).toLocaleString('es-ES',{maximumFractionDigits:0})+' k€'}</div></div>
+      <div class="kbox"><div class="k">Productos</div><div class="v">${prod.length}</div></div>
+      <div class="kbox"><div class="k">Top-5 clientes</div><div class="v">${pct(top5pct)}</div></div>
+    </div></div>
+    <div class="ana-row2">
+      <div class="card"><h2>Patrimonio por producto</h2>
+        <table><thead><tr><th>Producto</th><th class="num">Valor</th><th class="num">Peso</th><th class="num">Cart.</th><th class="num">Rent. 2026</th></tr></thead><tbody>${prodRows}</tbody></table></div>
+      <div class="card ana-col"><h2>Asignación</h2>
+        <div class="donutwrap"><svg viewBox="0 0 200 200" width="168" height="168">${dring}<text x="100" y="95" text-anchor="middle" font-size="11" fill="#575755">Mayor</text><text x="100" y="114" text-anchor="middle" font-size="14" font-weight="800" fill="#2b2b2b">${prod[0]?pct(prod[0].pct):'—'}</text></svg></div>
+        <div class="ana-clase"><div class="ct">Por clase de activo · vocación del fondo</div>${claseBars||'<p class="muted" style="margin:6px 0 0">Sin clasificación disponible.</p>'}</div></div>
+    </div>
+    <div class="ana-rowB">
+      <div class="card ana-col"><h2>Riesgo · histórico anual del conjunto</h2>
+        <div class="ana-tiles">
+          <div class="ana-tile"><div class="k">Volatilidad</div><div class="v">${bookAnual.length?pct(vol):'—'}</div></div>
+          <div class="ana-tile"><div class="k">Caída máx.</div><div class="v">${bookAnual.length?pct(dd):'—'}</div></div>
+          <div class="ana-tile"><div class="k">Mejor año</div><div class="v">${bookAnual.length?pct(Math.max(...rentsBook)):'—'}</div></div>
+          <div class="ana-tile"><div class="k">Peor año</div><div class="v">${bookAnual.length?pct(Math.min(...rentsBook)):'—'}</div></div>
+        </div>
+        <div class="ana-chart">${bookAnual.length?barSVG(bookAnual.map(y=>y.a),rentsBook):'<span class="muted">Sin serie anual.</span>'}</div>
+        <div class="muted" style="font-size:11px;margin-top:4px">Volatilidad = desv. típica de las rentabilidades anuales · Caída máxima = mayor retroceso acumulado.</div></div>
+      <div class="card ana-col"><h2>Concentración · mayores clientes</h2>
+        <table><thead><tr><th>Cliente</th><th class="num">Patrimonio</th><th class="num">% total</th></tr></thead><tbody>${topCli.map(([pid,v])=>`<tr><td>${nom(st.personas[pid])}<div class="cbar"><span style="width:${Math.round(v/((topCli[0]&&topCli[0][1])||1)*100)}%"></span></div></td><td class="num">${eur(v)}</td><td class="num">${pct(v/patTotal)}</td></tr>`).join('')}</tbody></table>
+        <div class="muted" style="font-size:11px;margin-top:8px">Las conjuntas se reparten entre sus titulares. El mayor producto, <b>${prod[0]?prod[0].nombre:'—'}</b>, pesa ${prod[0]?pct(prod[0].pct):'—'} del libro.</div></div>
+    </div></div>`;
 }
 
 
