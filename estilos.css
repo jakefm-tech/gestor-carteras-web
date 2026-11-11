@@ -113,8 +113,12 @@ select{padding:7px 9px;border:1px solid var(--amarillo-b);border-radius:7px;font
 /* ===================== IMPRESIÓN ===================== */
 @page{size:A4 landscape;margin:0}
 @media print{
-  .top,.tabs,.no-print{display:none!important}
-  #view>h1,#view>.card{display:none!important}
+  .top,.tabs,.no-print,#volver{display:none!important}
+  #view>h1{display:none!important}
+  #view>.card:not(:has(#doc)){display:none!important}
+  #ficha{border:none!important;box-shadow:none!important;padding:0!important;margin:0!important;background:transparent!important}
+  #ficha>.ficha-head,#ficha>.ftabs{display:none!important}
+  #ficha>div>p{display:none!important}
   .wrap{padding:0!important;margin:0!important;max-width:none!important}
   #doc{align-items:stretch!important}
   #doc .page{width:297mm!important;height:210mm!important;max-height:210mm!important;padding:7mm 8mm 12mm!important;box-sizing:border-box!important;
