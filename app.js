@@ -967,7 +967,7 @@ function armarInforme(cids){
   const fmtN=a=>a.length<=1?(a[0]||''):(a.length===2?a.join(' '+L.y+' '):a.slice(0,-1).join(', ')+' '+L.y+' '+a[a.length-1]);
   const titulo=(titNombres.length?fmtN(titNombres):nom(cli)).toUpperCase();
   const FECHA=(SELFECHA&&/^\d{4}-\d{2}-\d{2}$/.test(SELFECHA))?SELFECHA:null;
-  const ultVL=(()=>{let mx='';for(const _i in st.vl){for(const _k in st.vl[_i])if(_k>mx)mx=_k;}return mx||'2026-08-31';})();
+  const ultVL=(()=>{const held=new Set();for(const m of st.movimientos){if(cids.includes(m.cartera)&&m.instrumento)held.add(m.instrumento);}let mx='';for(const inst of held){const mm=st.vl[inst]||{};for(const _k in mm)if(_k>mx)mx=_k;}if(!mx){for(const _i in st.vl){for(const _k in st.vl[_i])if(_k>mx)mx=_k;}}return mx||'2026-08-31';})();
   const cierreISO=FECHA||ultVL;
   const cierreFmt=cierreISO.slice(8,10)+'/'+cierreISO.slice(5,7)+'/'+cierreISO.slice(0,4);
   // Valoración a la fecha elegida: VL, títulos y liquidez considerando solo lo ocurrido hasta esa fecha
