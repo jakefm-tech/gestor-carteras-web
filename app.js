@@ -976,7 +976,7 @@ function armarInforme(cids){
   if(!cids.length) return '';
   const e0=n=>new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2,useGrouping:'always'}).format(n||0)+' €';
   const p2=n=>(n>=0?'+':'')+new Intl.NumberFormat('es-ES',{minimumFractionDigits:2,maximumFractionDigits:2}).format((n||0)*100)+' %';
-  const p1=n=>new Intl.NumberFormat('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1}).format((n||0)*100)+' %';
+  const p1=n=>{let x=(n||0)*100; if(Math.abs(x)<0.05) x=0; return new Intl.NumberFormat('es-ES',{minimumFractionDigits:1,maximumFractionDigits:1}).format(x)+' %';};
   const t4=n=>new Intl.NumberFormat('es-ES',{maximumFractionDigits:4}).format(n||0);
   const patTotal=(()=>{ let v=0; const pos={}; for(const m of st.movimientos){ if(!cids.includes(m.cartera)||!m.instrumento)continue; if(FECHA&&m.fecha&&m.fecha>FECHA)continue; pos[m.instrumento]=(pos[m.instrumento]||0)+(m.titulos_delta||0); } for(const [inst,t] of Object.entries(pos)){ if(Math.abs(t)<1e-8)continue; const vl=vlF(inst); if(vl!=null)v+=t*vl/fxOf(st,inst); } return v+cids.reduce((a,c)=>a+liqAFecha(c),0); })();
   const valF=patTotal-cids.reduce((a,c)=>a+liqAFecha(c),0);
