@@ -47,7 +47,8 @@ async function cargarEventos(vault) {
       vistos.add(ev.id); eventos.push(ev);
     }
   }
-  eventos.sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : (a.id < b.id ? -1 : 1)));
+  const kts = t => (typeof t === 'string' && /^\d{4}-\d\d-\d\d/.test(t)) ? t : '';
+  eventos.sort((a, b) => { const ka = kts(a.ts), kb = kts(b.ts); return ka < kb ? -1 : ka > kb ? 1 : (a.id < b.id ? -1 : 1); });
   return eventos;
 }
 
